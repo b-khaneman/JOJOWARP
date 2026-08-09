@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — 2026-08-09
+
+### Fixed
+- **Host IPv6 disabled:** wg-quick no longer aborts on VPS images with `disable_ipv6=1` (e.g. Hetzner). Tunnel is IPv4-only automatically.
+- **Installer trap:** `staging: unbound variable` after a failed install (`set -u` + `local` + EXIT trap).
+
 ## 1.2.0 — 2026-08-09
 
 ### Fixed

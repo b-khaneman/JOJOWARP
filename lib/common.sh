@@ -39,7 +39,7 @@ if [[ -f "${AI_WARP_SHARE}/VERSION" ]]; then
 elif [[ -f "${AI_WARP_SHARE_LIB:-}/VERSION" ]]; then
   AI_WARP_VERSION="$(tr -d '[:space:]' <"${AI_WARP_SHARE_LIB}/VERSION")"
 else
-  AI_WARP_VERSION="${AI_WARP_VERSION_PIN:-1.2.0}"
+  AI_WARP_VERSION="${AI_WARP_VERSION_PIN:-1.2.1}"
 fi
 readonly AI_WARP_VERSION
 
@@ -73,6 +73,16 @@ ai_arch() {
     armv7l|armhf) echo armv7 ;;
     *) ai_fail "Unsupported arch: $(uname -m)" ;;
   esac
+}
+
+# True only if new interfaces can actually get an IPv6 address.
+# Many VPS images (Hetzner etc.) set disable_ipv6=1 — wg-quick then aborts.
+ai_host_ipv6_enabled() {
+  local all def
+  [[ -e /proc/net/if_inet6 ]] || return 1
+  all="$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null || echo 1)"
+  def="$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null || echo 1)"
+  [[ "$all" == "0" && "$def" == "0" ]]
 }
 
 ai_wireguard_supported() {

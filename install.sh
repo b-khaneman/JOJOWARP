@@ -12,7 +12,8 @@
 #
 set -euo pipefail
 
-readonly INSTALLER_VERSION="1.2.0"
+readonly INSTALLER_VERSION="1.2.1"
+AI_WARP_STAGING=""
 readonly GITHUB_USER="${AI_WARP_GITHUB_USER:-b-khaneman}"
 readonly GITHUB_REPO="${AI_WARP_GITHUB_REPO:-JOJOWARP}"
 readonly GITHUB_BRANCH="${AI_WARP_GITHUB_BRANCH:-main}"
@@ -180,7 +181,7 @@ EOF
 }
 
 main() {
-  local action="auto" mode="ai" local_root staging
+  local action="auto" mode="ai" local_root
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -222,18 +223,18 @@ main() {
 
   ensure_curl
 
-  staging="$(mktemp -d /tmp/ai-warp-stage.XXXXXX)"
-  trap 'rm -rf "$staging"' EXIT
+  AI_WARP_STAGING="$(mktemp -d /tmp/ai-warp-stage.XXXXXX)"
+  trap 'rm -rf "${AI_WARP_STAGING:-}"' EXIT
 
   local_root="$(resolve_local_root)"
   if [[ -n "$local_root" && -f "${local_root}/bin/ai-warp" && -f "${local_root}/lib/common.sh" ]]; then
     log "پکیج محلی: ${local_root}"
-    stage_from_local "$local_root" "$staging"
+    stage_from_local "$local_root" "$AI_WARP_STAGING"
   else
-    stage_from_remote "$staging"
+    stage_from_remote "$AI_WARP_STAGING"
   fi
 
-  install_tree "$staging"
+  install_tree "$AI_WARP_STAGING"
 
   case "$action" in
     files)

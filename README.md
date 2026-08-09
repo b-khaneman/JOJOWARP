@@ -6,7 +6,7 @@ One command. Zero prompts. Panel tunnel + Cloudflare CDN stay untouched.
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.2.0** · License: MIT
+Version: **1.2.1** · License: MIT
 
 ---
 
@@ -132,6 +132,7 @@ curl -fsSL https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/uninstall.
 | `warp≠on` | kernel WireGuard + UDP/2408 to `162.159.192.0/24` |
 | Gemini still blocked | confirm Kharej install; `ip route get 8.8.8.8` must show `dev aiwarp` |
 | ChatGPT still blocked | `sudo jojowarp refresh` (host `/32`s change); IPv6 leak is handled automatically |
+| `IPv6 is disabled on this device` | fixed in 1.2.1 — tunnel becomes IPv4-only automatically; re-run install |
 | registration failed | server must reach `api.cloudflareclient.com` (install on Kharej, not inside Iran) |
 
 Logs: `journalctl -u wg-quick@aiwarp -u ai-warp-watchdog.service -u ai-warp-refresh.service`

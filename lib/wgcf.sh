@@ -119,21 +119,29 @@ ai_extract_keys() {
 }
 
 ai_write_wg_conf() {
-  local endpoint addr_line
+  local endpoint addr_line allowed note
   ai_extract_keys
   endpoint="$(ai_discover_endpoint)"
   ai_save_endpoint "$endpoint"
-  if [[ -n "${AI_WARP_ADDRESS_V6:-}" ]]; then
+
+  if [[ -n "${AI_WARP_ADDRESS_V6:-}" ]] && ai_host_ipv6_enabled; then
     addr_line="${AI_WARP_ADDRESS_V4}, ${AI_WARP_ADDRESS_V6}"
+    allowed="0.0.0.0/0, ::/0"
+    note="IPv4+IPv6"
   else
     addr_line="${AI_WARP_ADDRESS_V4}"
+    allowed="0.0.0.0/0"
+    note="IPv4-only"
+    if [[ -n "${AI_WARP_ADDRESS_V6:-}" ]]; then
+      ai_warn "Host IPv6 is disabled — WARP tunnel will be IPv4-only (OK for AI unlock)."
+    fi
   fi
 
   umask 077
   cat >"${AI_WARP_WG_CONF}" <<EOF
 # ${AI_WARP_NAME} v${AI_WARP_VERSION} — generated $(date -u +%Y-%m-%dT%H:%M:%SZ)
 # Table=off → no default-route hijack. Selective AI routes via PostUp.
-# AllowedIPs includes ::/0 so IPv6 can enter the tunnel (routes still selective).
+# Mode: ${note}
 
 [Interface]
 PrivateKey = ${AI_WARP_PRIVATE_KEY}
@@ -145,12 +153,21 @@ PostDown = ${AI_WARP_SHARE}/scripts/routes.sh down
 
 [Peer]
 PublicKey = ${AI_WARP_PEER_KEY}
-AllowedIPs = 0.0.0.0/0, ::/0
+AllowedIPs = ${allowed}
 Endpoint = ${endpoint}:${AI_WARP_ENDPOINT_PORT}
 PersistentKeepalive = ${AI_WARP_KEEPALIVE}
 EOF
   chmod 600 "${AI_WARP_WG_CONF}"
-  ai_log "WireGuard config: ${AI_WARP_WG_CONF} (endpoint ${endpoint})"
+  ai_log "WireGuard config: ${AI_WARP_WG_CONF} (endpoint ${endpoint}, ${note})"
+}
+
+# If wg-quick aborted because IPv6 is off, rewrite Address/AllowedIPs to v4-only.
+ai_strip_wg_ipv6() {
+  [[ -f "${AI_WARP_WG_CONF}" ]] || return 1
+  sed -i -E \
+    -e 's/^(Address = [^,[:space:]]+),[[:space:]]*[^,[:space:]]+:.*$/\1/' \
+    -e 's|^(AllowedIPs = )0\.0\.0\.0/0, ::/0$|\10.0.0.0/0|' \
+    "${AI_WARP_WG_CONF}"
 }
 
 ai_set_wg_endpoint() {

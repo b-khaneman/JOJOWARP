@@ -9,7 +9,16 @@ TABLE="${AI_WARP_TABLE:-51821}"
 
 action="${1:-up}"
 
+host_ipv6_enabled() {
+  local all def
+  [[ -e /proc/net/if_inet6 ]] || return 1
+  all="$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null || echo 1)"
+  def="$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null || echo 1)"
+  [[ "$all" == "0" && "$def" == "0" ]]
+}
+
 iface_has_v6() {
+  host_ipv6_enabled || return 1
   ip -6 addr show dev "$IFACE" scope global >/dev/null 2>&1 \
     && ip -6 addr show dev "$IFACE" scope global | grep -q 'inet6'
 }
@@ -38,6 +47,10 @@ add_v4() {
 }
 
 add_v6() {
+  if ! host_ipv6_enabled; then
+    echo "ai-warp routes v6: skipped (IPv6 disabled on host)"
+    return 0
+  fi
   [[ -s "$CIDR6_FILE" ]] || return 0
 
   local cidr ok=0 fail=0 mode="via-warp"
@@ -83,6 +96,7 @@ del_v4() {
 }
 
 del_v6() {
+  host_ipv6_enabled || return 0
   local cidr
   if [[ -f "$CIDR6_FILE" ]]; then
     while IFS= read -r cidr; do

@@ -32,18 +32,26 @@ QUIET=0
 ai_qlog() { (( QUIET )) || ai_log "$@"; }
 ai_qinfo() { (( QUIET )) || ai_info "$@"; }
 
+ai_bring_up_iface() {
+  if ai_have systemctl && systemctl list-units >/dev/null 2>&1; then
+    systemctl enable "wg-quick@${AI_WARP_IFACE}" >/dev/null 2>&1 || true
+    if systemctl restart "wg-quick@${AI_WARP_IFACE}" >/dev/null 2>&1; then
+      return 0
+    fi
+    ai_warn "systemd restart failed — using wg-quick directly"
+  fi
+  wg-quick up "${AI_WARP_IFACE}"
+}
+
 ai_start_tunnel() {
   ai_qinfo "Bringing up ${AI_WARP_IFACE}…"
   wg-quick down "${AI_WARP_IFACE}" 2>/dev/null || true
 
-  if ai_have systemctl && systemctl list-units >/dev/null 2>&1; then
-    systemctl enable "wg-quick@${AI_WARP_IFACE}" >/dev/null 2>&1 || true
-    if ! systemctl restart "wg-quick@${AI_WARP_IFACE}" >/dev/null 2>&1; then
-      ai_warn "systemd restart failed — using wg-quick directly"
-      wg-quick up "${AI_WARP_IFACE}"
-    fi
-  else
-    wg-quick up "${AI_WARP_IFACE}"
+  if ! ai_bring_up_iface; then
+    ai_warn "Tunnel start failed — retrying IPv4-only (host IPv6 may be disabled)…"
+    wg-quick down "${AI_WARP_IFACE}" 2>/dev/null || true
+    ai_strip_wg_ipv6 || true
+    ai_bring_up_iface || ai_fail "Interface ${AI_WARP_IFACE} failed to start."
   fi
 
   local i
