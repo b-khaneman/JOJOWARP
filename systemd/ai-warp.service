@@ -1,0 +1,16 @@
+[Unit]
+Description=JOJOWARP Cloudflare selective tunnel (WireGuard)
+Documentation=https://github.com/b-khaneman/JOJOWARP
+After=network-online.target
+Wants=network-online.target
+# Optional convenience unit. The live tunnel is wg-quick@aiwarp.service.
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/wg-quick up aiwarp
+ExecStop=/usr/bin/wg-quick down aiwarp
+ExecReload=/usr/local/share/ai-warp/scripts/routes.sh up
+
+[Install]
+WantedBy=multi-user.target

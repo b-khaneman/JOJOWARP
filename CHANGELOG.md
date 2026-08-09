@@ -1,0 +1,27 @@
+# Changelog
+
+## 1.2.0 — 2026-08-09
+
+### Fixed
+- **IPv6 leak:** AI sites preferring IPv6 no longer bypass WARP. v6 prefixes are routed via the tunnel, or blackholed so Happy Eyeballs uses IPv4 via WARP.
+- **Handshake check:** use `wg latest-handshakes` and require a handshake younger than 3 minutes (stale handshakes no longer look healthy).
+- **Tunnel start:** stop double `wg-quick up` + `systemctl restart` race; wait for iface + handshake.
+- **DNS resolution:** `getent` no longer blocks `dig`; resolve via 1.1.1.1 / 8.8.8.8 / 9.9.9.9 then system resolver. AAAA included.
+- **WARP engage filter:** no longer drop all `162.159.0.0/16` (that killed some ChatGPT/Claude `/32`s). Only engage ranges are excluded.
+- **`rp_filter`:** disable only on the WARP interface, not globally.
+- **Healthcheck:** systemd inactive is a warning if the interface is already up; `warp=on` trace is now a first-class check.
+- **Reinstall:** sticky IP is preserved unless `--relock`.
+- **Version skew:** installer / `VERSION` / runtime all report **1.2.0**.
+- **wgcf download:** verify ELF magic; pin fallback to **2.2.32**.
+- **Restart/uninstall:** fall back to `wg-quick` when systemd fails; tear down v4+v6 routes.
+
+### Added
+- WARP endpoint discovery (`engage.cloudflareclient.com`) with watchdog rotation on handshake failure.
+- Kernel WireGuard probe (clear error on OpenVZ).
+- `jojowarp doctor` alias for status.
+- GitHub Actions: `bash -n` + ShellCheck.
+- Cleaner domain list (deduped + Cursor / Sora / extra Google AI hosts).
+
+## 1.1.1
+
+- Initial public package layout (installer, watchdog, sticky IP, CDN-safe routes).

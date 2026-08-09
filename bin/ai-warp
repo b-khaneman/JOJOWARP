@@ -1,0 +1,330 @@
+#!/usr/bin/env bash
+#
+# ai-warp / jojowarp — Cloudflare WARP selective unlock for AI services
+# Gemini / Google Flow / ChatGPT / Claude / Copilot / Android Studio / …
+#
+set -euo pipefail
+
+AI_WARP_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd || true)"
+if [[ -f /usr/local/share/ai-warp/lib/common.sh ]]; then
+  AI_WARP_SHARE_LIB=/usr/local/share/ai-warp
+elif [[ -f "${AI_WARP_ROOT}/lib/common.sh" ]]; then
+  AI_WARP_SHARE_LIB="${AI_WARP_ROOT}"
+else
+  echo "JOJOWARP libraries not found. Reinstall: sudo bash install.sh" >&2
+  exit 1
+fi
+
+# shellcheck source=/dev/null
+source "${AI_WARP_SHARE_LIB}/lib/common.sh"
+# shellcheck source=/dev/null
+source "${AI_WARP_SHARE_LIB}/lib/deps.sh"
+# shellcheck source=/dev/null
+source "${AI_WARP_SHARE_LIB}/lib/wgcf.sh"
+# shellcheck source=/dev/null
+source "${AI_WARP_SHARE_LIB}/lib/routes-build.sh"
+# shellcheck source=/dev/null
+source "${AI_WARP_SHARE_LIB}/lib/sticky.sh"
+# shellcheck source=/dev/null
+source "${AI_WARP_SHARE_LIB}/lib/health.sh"
+
+QUIET=0
+ai_qlog() { (( QUIET )) || ai_log "$@"; }
+ai_qinfo() { (( QUIET )) || ai_info "$@"; }
+
+ai_start_tunnel() {
+  ai_qinfo "Bringing up ${AI_WARP_IFACE}…"
+  wg-quick down "${AI_WARP_IFACE}" 2>/dev/null || true
+
+  if ai_have systemctl && systemctl list-units >/dev/null 2>&1; then
+    systemctl enable "wg-quick@${AI_WARP_IFACE}" >/dev/null 2>&1 || true
+    if ! systemctl restart "wg-quick@${AI_WARP_IFACE}" >/dev/null 2>&1; then
+      ai_warn "systemd restart failed — using wg-quick directly"
+      wg-quick up "${AI_WARP_IFACE}"
+    fi
+  else
+    wg-quick up "${AI_WARP_IFACE}"
+  fi
+
+  local i
+  for i in {1..10}; do
+    ai_iface_up && break
+    sleep 1
+  done
+  ai_iface_up || ai_fail "Interface ${AI_WARP_IFACE} failed to start."
+
+  for i in {1..15}; do
+    ai_handshake_ok && break
+    sleep 1
+  done
+  if ai_handshake_ok; then
+    ai_qlog "Tunnel ${AI_WARP_IFACE} is UP (handshake OK)."
+  else
+    ai_warn "Tunnel is UP but handshake not yet confirmed (watchdog will retry)."
+  fi
+}
+
+ai_enable_watchdogs() {
+  if ! ai_have systemctl || ! systemctl list-units >/dev/null 2>&1; then
+    ai_warn "systemd unavailable — skip watchdog timers (tunnel is still up)."
+    return 0
+  fi
+
+  local unit src
+  for unit in \
+    ai-warp-watchdog.service \
+    ai-warp-watchdog.timer \
+    ai-warp-refresh.service \
+    ai-warp-refresh.timer
+  do
+    src="${AI_WARP_SHARE}/systemd/${unit}"
+    [[ -f "$src" ]] || src="${AI_WARP_SHARE_LIB}/systemd/${unit}"
+    [[ -f "$src" ]] || { ai_warn "Missing unit: $unit"; continue; }
+    install -m644 "$src" "/etc/systemd/system/${unit}"
+  done
+  systemctl daemon-reload 2>/dev/null || true
+  systemctl enable --now ai-warp-watchdog.timer >/dev/null 2>&1 || true
+  systemctl enable --now ai-warp-refresh.timer >/dev/null 2>&1 || true
+  ai_qlog "Watchdog + refresh timers enabled."
+}
+
+ai_cmd_install() {
+  local mode="${1:-ai}"
+  ai_need_root
+  case "$mode" in
+    ai|google|full) ;;
+    *) ai_fail "Unknown mode: $mode (ai|google|full)" ;;
+  esac
+
+  if [[ "${AI_WARP_AUTO:-0}" != "1" ]]; then
+    (( QUIET )) || ai_banner
+  fi
+  echo
+  ai_info "Mode: ${mode}  |  Interface: ${AI_WARP_IFACE}  |  Auto: ${AI_WARP_AUTO:-0}"
+  ai_info "Panel tunnels + Cloudflare CDN stay direct — only AI egress uses WARP."
+  echo
+
+  ai_install_deps
+  ai_install_wgcf
+  ai_register_warp
+  ai_build_cidr_list "$mode"
+  ai_write_wg_conf
+  modprobe wireguard 2>/dev/null || true
+  ai_start_tunnel
+  ai_enable_watchdogs
+  sleep 2
+  if [[ ! -s "${AI_WARP_STICKY_IP}" ]]; then
+    ai_sticky_save force >/dev/null 2>&1 || true
+  else
+    ai_sticky_save >/dev/null 2>&1 || true
+  fi
+  echo
+  ai_healthcheck || true
+  echo
+  ai_log "تمام — Gemini / Flow / ChatGPT / Claude از این سرور آنلاک شدند."
+  ai_log "کانفیگ پنل و CDN کلودفلر را عوض نکن؛ لازم نیست."
+  if [[ "${AI_WARP_AUTO:-0}" != "1" ]]; then
+    cat <<EOF
+
+دستورات:
+  jojowarp status
+  jojowarp ip
+  jojowarp refresh
+  jojowarp uninstall
+EOF
+  fi
+}
+
+ai_cmd_refresh() {
+  ai_need_root
+  local mode
+  mode="$(cat "${AI_WARP_MODE_FILE}" 2>/dev/null || echo ai)"
+  ai_qinfo "Refreshing routes (mode=${mode})…"
+  [[ -x "${AI_WARP_WGCF}" ]] || ai_install_wgcf
+  [[ -s "${AI_WARP_ACCOUNT}" ]] || ai_fail "Not installed. Run: ai-warp install"
+  ai_build_cidr_list "$mode"
+  if ai_iface_up; then
+    "${AI_WARP_SHARE}/scripts/routes.sh" down 2>/dev/null || true
+    "${AI_WARP_SHARE}/scripts/routes.sh" up
+  else
+    ai_start_tunnel
+  fi
+  ai_sticky_save >/dev/null 2>&1 || true
+  ai_qlog "Refresh done."
+}
+
+ai_cmd_restart() {
+  ai_need_root
+  if ai_have systemctl && systemctl list-units >/dev/null 2>&1; then
+    systemctl restart "wg-quick@${AI_WARP_IFACE}" 2>/dev/null \
+      || { wg-quick down "${AI_WARP_IFACE}" 2>/dev/null || true; wg-quick up "${AI_WARP_IFACE}"; }
+  else
+    wg-quick down "${AI_WARP_IFACE}" 2>/dev/null || true
+    wg-quick up "${AI_WARP_IFACE}"
+  fi
+  sleep 1
+  "${AI_WARP_SHARE}/scripts/routes.sh" up 2>/dev/null || true
+  ai_sticky_save || true
+  ai_log "Restarted."
+}
+
+ai_cmd_ip() {
+  case "${1:-}" in
+    --relock)
+      ai_need_root
+      ai_sticky_relock
+      ;;
+    *)
+      ai_sticky_status || true
+      ;;
+  esac
+}
+
+ai_cmd_uninstall() {
+  ai_need_root
+  local purge=0
+  [[ "${1:-}" == "--purge" ]] && purge=1
+
+  ai_info "Stopping JOJOWARP…"
+  systemctl disable --now ai-warp-watchdog.timer 2>/dev/null || true
+  systemctl disable --now ai-warp-refresh.timer 2>/dev/null || true
+  systemctl disable --now "wg-quick@${AI_WARP_IFACE}" 2>/dev/null || true
+  "${AI_WARP_SHARE}/scripts/routes.sh" down 2>/dev/null || true
+  wg-quick down "${AI_WARP_IFACE}" 2>/dev/null || true
+
+  rm -f "${AI_WARP_WG_CONF}"
+  rm -f /etc/systemd/system/ai-warp-watchdog.service
+  rm -f /etc/systemd/system/ai-warp-watchdog.timer
+  rm -f /etc/systemd/system/ai-warp-refresh.service
+  rm -f /etc/systemd/system/ai-warp-refresh.timer
+  rm -f /etc/systemd/system/ai-warp.service
+  systemctl daemon-reload 2>/dev/null || true
+
+  rm -rf "${AI_WARP_SHARE}"
+  rm -f "${AI_WARP_BIN}" /usr/local/bin/jojowarp
+
+  if (( purge )); then
+    rm -rf "${AI_WARP_STATE}"
+    ai_log "Purged account + state."
+  else
+    ai_warn "Kept ${AI_WARP_STATE} (stable account). Use --purge to wipe."
+  fi
+  ai_log "Uninstalled."
+}
+
+ai_menu() {
+  ai_need_root
+  ai_banner
+  cat <<EOF
+
+  1) Install — ALL AI (Gemini, Flow, ChatGPT, Claude, Copilot, …)  [recommended]
+  2) Install — Google family only (Gemini / Flow / Android Studio)
+  3) Install — Full (AI + CloudFront CDN ranges)
+  4) Status / health
+  5) Refresh routes
+  6) Show / re-lock sticky IP
+  7) Restart tunnel
+  8) Uninstall
+  0) Exit
+
+EOF
+  local c
+  read -rp "Select: " c
+  case "$c" in
+    1) ai_cmd_install ai ;;
+    2) ai_cmd_install google ;;
+    3) ai_cmd_install full ;;
+    4) ai_healthcheck || true ;;
+    5) ai_cmd_refresh ;;
+    6)
+      echo
+      ai_sticky_status || true
+      echo
+      read -rp "Re-lock sticky IP to current? [y/N] " y
+      [[ "$y" =~ ^[Yy]$ ]] && ai_sticky_relock
+      ;;
+    7) ai_cmd_restart ;;
+    8) ai_cmd_uninstall ;;
+    0) exit 0 ;;
+    *) ai_warn "Invalid"; exit 1 ;;
+  esac
+}
+
+usage() {
+  cat <<EOF
+${AI_WARP_NAME} v${AI_WARP_VERSION}
+
+Usage:
+  jojowarp                     Interactive menu
+  jojowarp install [ai|google|full]
+  jojowarp status
+  jojowarp refresh [--quiet]
+  jojowarp restart
+  jojowarp ip [--relock]
+  jojowarp watchdog             (systemd timer)
+  jojowarp uninstall [--purge]
+  jojowarp version
+
+Modes:
+  ai       All AI services via WARP (default) — Gemini, Flow, OpenAI, Claude, …
+  google   Google / Gemini / Flow / Android Studio only
+  full     AI + AWS CloudFront CIDRs
+
+Sticky IP:
+  Free WARP keeps a persistent account (identity stable across reboots).
+  Egress IP is locked to sticky-ip on first success; watchdog monitors drift.
+  Optional WARP+:  export AI_WARP_LICENSE=xxxx-xxxx-xxxx-xxxx
+
+IPv6:
+  If WARP provides IPv6, AI v6 prefixes are routed through the tunnel.
+  Otherwise they are blackholed so Happy Eyeballs falls back to IPv4 via WARP.
+
+Support: ${AI_WARP_SUPPORT}
+Repo:    ${AI_WARP_REPO_URL}
+EOF
+}
+
+main() {
+  local args=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --quiet|-q) QUIET=1; shift ;;
+      *) args+=("$1"); shift ;;
+    esac
+  done
+  if ((${#args[@]} > 0)); then
+    set -- "${args[@]}"
+  else
+    set --
+  fi
+
+  if [[ $# -eq 0 ]]; then
+    if [[ "${AI_WARP_AUTO:-0}" == "1" ]] || [[ ! -t 0 ]]; then
+      ai_cmd_install ai
+      return 0
+    fi
+    ai_menu
+    return 0
+  fi
+
+  case "${1:-}" in
+    -h|--help|help) usage ;;
+    -v|--version|version) echo "ai-warp ${AI_WARP_VERSION}" ;;
+    install)
+      shift || true
+      ai_cmd_install "${1:-ai}"
+      ;;
+    status|health|doctor) ai_healthcheck || true ;;
+    refresh) ai_cmd_refresh ;;
+    restart) ai_cmd_restart ;;
+    ip) shift || true; ai_cmd_ip "${1:-}" ;;
+    watchdog) ai_need_root; ai_watchdog_tick ;;
+    uninstall)
+      shift || true
+      ai_cmd_uninstall "${1:-}"
+      ;;
+    *) usage; exit 1 ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+      - name: Syntax check
+        run: |
+          bash -n install.sh uninstall.sh bin/ai-warp scripts/routes.sh
+          bash -n lib/common.sh lib/deps.sh lib/wgcf.sh lib/routes-build.sh lib/sticky.sh lib/health.sh
+      - name: ShellCheck
+        run: |
+          shellcheck -s bash install.sh uninstall.sh bin/ai-warp scripts/routes.sh
+          shellcheck -s bash -x lib/common.sh lib/deps.sh lib/wgcf.sh lib/routes-build.sh lib/sticky.sh lib/health.sh

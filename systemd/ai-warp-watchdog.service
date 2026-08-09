@@ -1,0 +1,10 @@
+[Unit]
+Description=JOJOWARP watchdog (heal tunnel + routes)
+Documentation=https://github.com/b-khaneman/JOJOWARP
+After=network-online.target wg-quick@aiwarp.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ai-warp watchdog
+Nice=10

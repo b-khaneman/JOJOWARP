@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh JOJOWARP routes every 6 hours
+Documentation=https://github.com/b-khaneman/JOJOWARP
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+Persistent=true
+Unit=ai-warp-refresh.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=JOJOWARP domain/CIDR refresh (keeps AI routes fresh)
+Documentation=https://github.com/b-khaneman/JOJOWARP
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ai-warp refresh --quiet
+Nice=10
