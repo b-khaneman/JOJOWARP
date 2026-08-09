@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2 — 2026-08-09
+
+### Fixed
+- **Stale jsDelivr cache:** installer fetched old 1.2.0 libs while showing 1.2.1 banner. GitHub raw is first; package `VERSION` must match installer or it re-downloads.
+- **WARP Address is IPv4-only by default** so `wg-quick` never dies on `disable_ipv6=1`. Opt-in: `AI_WARP_IPV6=1`.
+
 ## 1.2.1 — 2026-08-09
 
 ### Fixed

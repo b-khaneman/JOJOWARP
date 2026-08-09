@@ -124,7 +124,8 @@ ai_write_wg_conf() {
   endpoint="$(ai_discover_endpoint)"
   ai_save_endpoint "$endpoint"
 
-  if [[ -n "${AI_WARP_ADDRESS_V6:-}" ]] && ai_host_ipv6_enabled; then
+  # Default IPv4-only. Opt-in WARP IPv6 with AI_WARP_IPV6=1 (fails on hosts with disable_ipv6=1).
+  if [[ "${AI_WARP_IPV6:-0}" == "1" ]] && [[ -n "${AI_WARP_ADDRESS_V6:-}" ]] && ai_host_ipv6_enabled; then
     addr_line="${AI_WARP_ADDRESS_V4}, ${AI_WARP_ADDRESS_V6}"
     allowed="0.0.0.0/0, ::/0"
     note="IPv4+IPv6"
@@ -132,8 +133,8 @@ ai_write_wg_conf() {
     addr_line="${AI_WARP_ADDRESS_V4}"
     allowed="0.0.0.0/0"
     note="IPv4-only"
-    if [[ -n "${AI_WARP_ADDRESS_V6:-}" ]]; then
-      ai_warn "Host IPv6 is disabled — WARP tunnel will be IPv4-only (OK for AI unlock)."
+    if [[ "${AI_WARP_IPV6:-0}" == "1" ]]; then
+      ai_warn "AI_WARP_IPV6=1 requested but host IPv6 is unusable — falling back to IPv4-only."
     fi
   fi
 

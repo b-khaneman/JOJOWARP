@@ -6,7 +6,7 @@ One command. Zero prompts. Panel tunnel + Cloudflare CDN stay untouched.
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.2.1** · License: MIT
+Version: **1.2.2** · License: MIT
 
 ---
 
@@ -15,13 +15,13 @@ Version: **1.2.1** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.2" | sudo bash
 ```
 
-If GitHub is filtered:
+If GitHub is filtered (may be cached — prefer GitHub raw when possible):
 
 ```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@main/install.sh | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.2.2/install.sh" | sudo bash
 ```
 
 Local clone:
@@ -132,7 +132,8 @@ curl -fsSL https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/uninstall.
 | `warp≠on` | kernel WireGuard + UDP/2408 to `162.159.192.0/24` |
 | Gemini still blocked | confirm Kharej install; `ip route get 8.8.8.8` must show `dev aiwarp` |
 | ChatGPT still blocked | `sudo jojowarp refresh` (host `/32`s change); IPv6 leak is handled automatically |
-| `IPv6 is disabled on this device` | fixed in 1.2.1 — tunnel becomes IPv4-only automatically; re-run install |
+| `IPv6 is disabled on this device` | fixed in 1.2.2 — tunnel is IPv4-only by default; re-run install from GitHub raw |
+| installer says 1.2.x but `jojowarp N نصب شد` is older | CDN cache; use the `?v=` GitHub raw URL in Install |
 | registration failed | server must reach `api.cloudflareclient.com` (install on Kharej, not inside Iran) |
 
 Logs: `journalctl -u wg-quick@aiwarp -u ai-warp-watchdog.service -u ai-warp-refresh.service`

@@ -12,7 +12,7 @@
 #
 set -euo pipefail
 
-readonly INSTALLER_VERSION="1.2.1"
+readonly INSTALLER_VERSION="1.2.2"
 AI_WARP_STAGING=""
 readonly GITHUB_USER="${AI_WARP_GITHUB_USER:-b-khaneman}"
 readonly GITHUB_REPO="${AI_WARP_GITHUB_REPO:-JOJOWARP}"
@@ -55,16 +55,29 @@ resolve_local_root() {
   cd "$(dirname "$src")" && pwd
 }
 
-mirror_urls() {
-  local file="$1" u="$GITHUB_USER" r="$GITHUB_REPO" b="$GITHUB_BRANCH" p="$GITHUB_PATH" rel
+package_relpath() {
+  local file="$1" p="$GITHUB_PATH"
   if [[ -n "$p" ]]; then
-    rel="${p%/}/${file}"
+    echo "${p%/}/${file}"
   else
-    rel="$file"
+    echo "$file"
   fi
+}
+
+github_raw_url() {
+  local rel
+  rel="$(package_relpath "$1")"
+  echo "https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${rel}?v=${INSTALLER_VERSION}"
+}
+
+mirror_urls() {
+  local rel ver="$INSTALLER_VERSION" u="$GITHUB_USER" r="$GITHUB_REPO" b="$GITHUB_BRANCH"
+  rel="$(package_relpath "$1")"
+  # GitHub raw first (fresh). jsDelivr @main is often stale — pin to release tag.
   printf '%s\n' \
+    "https://raw.githubusercontent.com/${u}/${r}/${b}/${rel}?v=${ver}" \
+    "https://cdn.jsdelivr.net/gh/${u}/${r}@v${ver}/${rel}" \
     "https://cdn.jsdelivr.net/gh/${u}/${r}@${b}/${rel}" \
-    "https://raw.githubusercontent.com/${u}/${r}/${b}/${rel}" \
     "https://raw.gitmirror.com/${u}/${r}/${b}/${rel}" \
     "https://ghproxy.net/https://raw.githubusercontent.com/${u}/${r}/${b}/${rel}" \
     "https://mirror.ghproxy.com/https://raw.githubusercontent.com/${u}/${r}/${b}/${rel}"
@@ -74,6 +87,7 @@ download_file() {
   local url="$1" dest="$2" i
   for i in 1 2 3; do
     if curl -fsSL --connect-timeout 12 --max-time 90 --retry 2 --retry-delay 1 \
+        -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' \
         "$url" -o "$dest" && [[ -s "$dest" ]]; then
       return 0
     fi
@@ -92,6 +106,12 @@ fetch_file() {
     fi
   done < <(mirror_urls "$rel")
   return 1
+}
+
+fetch_file_github_raw() {
+  local rel="$1" dest="$2"
+  mkdir -p "$(dirname "$dest")"
+  download_file "$(github_raw_url "$rel")" "$dest"
 }
 
 PACKAGE_FILES=(
@@ -122,9 +142,14 @@ stage_from_local() {
   done
 }
 
+package_version_of() {
+  tr -d '[:space:]' <"$1/VERSION" 2>/dev/null || true
+}
+
 stage_from_remote() {
-  local staging="$1" f failed=0
-  info "دانلود پکیج JOJOWARP…"
+  local staging="$1" f failed=0 got
+
+  info "دانلود پکیج JOJOWARP ${INSTALLER_VERSION}…"
   for f in "${PACKAGE_FILES[@]}"; do
     if fetch_file "$f" "${staging}/${f}"; then
       log "OK  $f"
@@ -134,6 +159,24 @@ stage_from_remote() {
     fi
   done
   (( failed == 0 )) || fail "دانلود پکیج ناقص بود. شبکه/فیلتر را چک کن یا از کلون محلی نصب کن."
+
+  got="$(package_version_of "$staging")"
+  if [[ "$got" != "$INSTALLER_VERSION" ]]; then
+    warn "CDN/mirror نسخه کهنه داد (${got:-?}) — از GitHub raw می‌گیرم (${INSTALLER_VERSION})…"
+    failed=0
+    for f in "${PACKAGE_FILES[@]}"; do
+      if fetch_file_github_raw "$f" "${staging}/${f}"; then
+        log "OK  $f"
+      else
+        warn "FAIL $f"
+        failed=1
+      fi
+    done
+    (( failed == 0 )) || fail "دانلود از GitHub raw ناموفق بود."
+    got="$(package_version_of "$staging")"
+    [[ "$got" == "$INSTALLER_VERSION" ]] \
+      || fail "نسخه پکیج هم‌خوان نیست: got ${got:-?} want ${INSTALLER_VERSION}"
+  fi
 }
 
 install_tree() {
