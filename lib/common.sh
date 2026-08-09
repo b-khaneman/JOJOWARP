@@ -30,6 +30,8 @@ readonly AI_WARP_CIDR6_FILE="${AI_WARP_STATE}/allowed-ips-v6.txt"
 readonly AI_WARP_ENDPOINT_FILE="${AI_WARP_STATE}/endpoint"
 readonly AI_WARP_STICKY_IP="${AI_WARP_STATE}/sticky-ip"
 readonly AI_WARP_LAST_IP="${AI_WARP_STATE}/last-ip"
+readonly AI_WARP_HOST_BIND="${AI_WARP_STATE}/host-bind"
+readonly AI_WARP_INSTALL_ID="${AI_WARP_STATE}/install-id"
 readonly AI_WARP_WGCF="${AI_WARP_PREFIX}/bin/wgcf"
 readonly AI_WARP_SUPPORT="@B_khaneman"
 readonly AI_WARP_REPO_URL="https://github.com/b-khaneman/JOJOWARP"
@@ -39,7 +41,7 @@ if [[ -f "${AI_WARP_SHARE}/VERSION" ]]; then
 elif [[ -f "${AI_WARP_SHARE_LIB:-}/VERSION" ]]; then
   AI_WARP_VERSION="$(tr -d '[:space:]' <"${AI_WARP_SHARE_LIB}/VERSION")"
 else
-  AI_WARP_VERSION="${AI_WARP_VERSION_PIN:-1.2.4}"
+  AI_WARP_VERSION="${AI_WARP_VERSION_PIN:-1.2.5}"
 fi
 readonly AI_WARP_VERSION
 

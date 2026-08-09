@@ -6,7 +6,7 @@ One command. Zero prompts. Panel tunnel + Cloudflare CDN stay untouched.
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.2.4** · License: MIT
+Version: **1.2.5** · License: MIT
 
 ---
 
@@ -15,13 +15,13 @@ Version: **1.2.4** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.4" | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.5" | sudo bash
 ```
 
 If GitHub is filtered (may be cached — prefer GitHub raw when possible):
 
 ```bash
-curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.2.4/install.sh" | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.2.5/install.sh" | sudo bash
 ```
 
 Local clone:
@@ -83,6 +83,24 @@ sudo bash install.sh --files-only
 
 ---
 
+## Unique identity (per server)
+
+Every install calls Cloudflare and creates a **new WARP device** (`device_id`) for that VPS.
+
+- Account files are **never** shipped in the GitHub repo.
+- Identity is bound to a **host fingerprint** (`/etc/ai-warp/host-bind`).
+- Copying `wgcf-account.toml` to another server is **rejected** → that server registers its own new account.
+- Same-server reinstall keeps the same identity (sticky IP).
+- Force a brand-new identity anytime:
+
+```bash
+sudo jojowarp install --fresh
+# or:
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.5" | sudo bash -s -- --fresh
+```
+
+---
+
 ## WARP+
 
 Optional paid license (more stable egress):
@@ -92,12 +110,20 @@ export AI_WARP_LICENSE=xxxx-xxxx-xxxx-xxxx
 sudo bash install.sh
 ```
 
-Keep the same account across reinstalls (do **not** `--purge` unless you want a new identity).
+Keep the same account across reinstalls on the **same** host automatically.  
+To wipe identity: `sudo jojowarp uninstall --purge` or install with `--fresh`.
 
 Reinstall without overwriting `/etc/ai-warp/ai-domains.txt`:
 
 ```bash
 export AI_WARP_KEEP_DOMAINS=1
+sudo bash install.sh
+```
+
+Adopt a legacy unbound account on this host (rare):
+
+```bash
+export AI_WARP_KEEP_ACCOUNT=1
 sudo bash install.sh
 ```
 

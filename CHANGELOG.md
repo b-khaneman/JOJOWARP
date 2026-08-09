@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.5 — 2026-08-09
+
+### Added
+- **Unique per-server WARP identity:** each install registers its own Cloudflare `device_id`.
+- **Host bind:** account is tied to machine fingerprint; copied accounts from another VPS are rejected and replaced.
+- `--fresh` / `AI_WARP_FRESH=1` forces a brand-new account + sticky re-lock.
+- `AI_WARP_KEEP_ACCOUNT=1` adopts a legacy unbound account onto this host.
+
 ## 1.2.4 — 2026-08-09
 
 ### Fixed

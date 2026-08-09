@@ -6,3 +6,12 @@
 .idea/
 .vscode/
 *.log
+
+# Never commit WARP secrets / runtime state
+wgcf-account.toml
+wgcf-profile.conf
+**/wgcf-account.toml
+**/wgcf-profile.conf
+/etc/
+*.pem
+*.key

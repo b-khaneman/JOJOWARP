@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # wgcf account + WireGuard profile management
+# Each install binds a unique Cloudflare WARP identity to THIS host.
+# Copied account.toml from another VPS is rejected → fresh register.
 # shellcheck shell=bash
 
 ai_discover_endpoint() {
@@ -60,22 +62,121 @@ ai_save_endpoint() {
   echo "$ip" >"${AI_WARP_ENDPOINT_FILE}"
 }
 
+# Stable fingerprint for THIS machine (not shared across VPS clones intentionally).
+ai_host_fingerprint() {
+  local mid disk host product
+  mid="$(cat /etc/machine-id 2>/dev/null || cat /var/lib/dbus/machine-id 2>/dev/null || true)"
+  [[ -n "$mid" ]] || mid="$(hostname -f 2>/dev/null || hostname || echo unknown-host)"
+  disk="$(lsblk -ndo UUID "$(findmnt -no SOURCE / 2>/dev/null | head -1)" 2>/dev/null | head -1 || true)"
+  [[ -n "$disk" ]] || disk="$(cat /sys/class/dmi/id/product_uuid 2>/dev/null | tr -d '[:space:]' || true)"
+  product="$(cat /sys/class/dmi/id/product_serial 2>/dev/null | tr -d '[:space:]' || true)"
+  host="$(hostname -s 2>/dev/null || echo host)"
+  printf '%s\n' "${mid}|${disk}|${product}|${host}" | sha256sum 2>/dev/null | awk '{print $1}' \
+    || printf '%s\n' "${mid}|${disk}|${product}|${host}" | md5sum | awk '{print $1}'
+}
+
+ai_new_install_id() {
+  if ai_have openssl; then
+    openssl rand -hex 16
+  elif [[ -r /dev/urandom ]]; then
+    head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n'
+  else
+    date +%s%N
+  fi
+}
+
+ai_account_device_id() {
+  awk -F'= *' '/^device_id/{gsub(/"/,"",$2); gsub(/ /,"",$2); print $2; exit}' \
+    "${AI_WARP_ACCOUNT}" 2>/dev/null || true
+}
+
+ai_account_private_key() {
+  awk -F'= *' '/^private_key/{gsub(/"/,"",$2); gsub(/ /,"",$2); print $2; exit}' \
+    "${AI_WARP_ACCOUNT}" 2>/dev/null || true
+}
+
+# Reject empty / truncated / obviously shared placeholder accounts.
+ai_account_looks_valid() {
+  local did pk
+  [[ -s "${AI_WARP_ACCOUNT}" ]] || return 1
+  did="$(ai_account_device_id)"
+  pk="$(ai_account_private_key)"
+  [[ "$did" =~ ^[0-9a-fA-F-]{32,}$ ]] || return 1
+  [[ ${#pk} -ge 40 ]] || return 1
+  return 0
+}
+
+ai_bind_account_to_host() {
+  local fp iid did
+  umask 077
+  fp="$(ai_host_fingerprint)"
+  iid="$(ai_new_install_id)"
+  did="$(ai_account_device_id)"
+  printf '%s\n' "$fp" >"${AI_WARP_HOST_BIND}"
+  printf '%s\n' "$iid" >"${AI_WARP_INSTALL_ID}"
+  chmod 600 "${AI_WARP_HOST_BIND}" "${AI_WARP_INSTALL_ID}" "${AI_WARP_ACCOUNT}" 2>/dev/null || true
+  ai_log "Unique WARP identity bound to this host"
+  ai_info "install-id : ${iid}"
+  [[ -n "$did" ]] && ai_info "device-id  : ${did}"
+}
+
+# 0 = safe to reuse on this host; 1 = must register fresh.
+ai_account_reusable_here() {
+  local fp stored
+  [[ "${AI_WARP_FRESH:-0}" == "1" ]] && return 1
+  ai_account_looks_valid || return 1
+
+  # Explicit keep: adopt unbound legacy account onto this host once.
+  if [[ "${AI_WARP_KEEP_ACCOUNT:-0}" == "1" && ! -s "${AI_WARP_HOST_BIND}" ]]; then
+    ai_bind_account_to_host
+    return 0
+  fi
+
+  [[ -s "${AI_WARP_HOST_BIND}" ]] || return 1
+  fp="$(ai_host_fingerprint)"
+  stored="$(tr -d '[:space:]' <"${AI_WARP_HOST_BIND}")"
+  [[ -n "$fp" && "$fp" == "$stored" ]] || return 1
+  return 0
+}
+
+ai_wipe_warp_identity() {
+  rm -f "${AI_WARP_ACCOUNT}" "${AI_WARP_PROFILE}" \
+    "${AI_WARP_STATE}/wgcf-account.toml" "${AI_WARP_STATE}/wgcf-profile.conf" \
+    "${AI_WARP_HOST_BIND}" "${AI_WARP_INSTALL_ID}" \
+    "${AI_WARP_STICKY_IP}" "${AI_WARP_LAST_IP}" 2>/dev/null || true
+}
+
 ai_register_warp() {
   install -d -m700 "${AI_WARP_STATE}"
   install -d -m755 "${AI_WARP_WG_DIR}"
+  umask 077
 
-  if [[ -s "${AI_WARP_ACCOUNT}" ]]; then
-    ai_log "Reusing persistent WARP account (stable identity)."
+  if ai_account_reusable_here; then
+    ai_log "Reusing WARP account for THIS host only (stable identity)."
+    ai_info "device-id  : $(ai_account_device_id)"
+    ai_info "install-id : $(tr -d '[:space:]' <"${AI_WARP_INSTALL_ID}" 2>/dev/null || echo —)"
   else
-    ai_info "Registering free Cloudflare WARP account…"
+    if [[ -s "${AI_WARP_ACCOUNT}" ]]; then
+      if [[ "${AI_WARP_FRESH:-0}" == "1" ]]; then
+        ai_warn "AI_WARP_FRESH=1 — discarding old account, registering a new unique identity…"
+      else
+        ai_warn "Existing WARP account is missing host-bind or belongs to another machine — registering a NEW unique account…"
+      fi
+      ai_wipe_warp_identity
+    fi
+
+    ai_info "Registering a unique Cloudflare WARP account for this server…"
     if ! (
       cd "${AI_WARP_STATE}"
+      # Never reuse cwd leftovers from a copied tree
+      rm -f wgcf-account.toml wgcf-profile.conf
       "${AI_WARP_WGCF}" register --accept-tos
     ); then
       ai_fail "WARP registration failed. Ensure api.cloudflareclient.com is reachable from this Kharej server."
     fi
     [[ -s "${AI_WARP_ACCOUNT}" ]] || ai_fail "WARP registration failed (no account file)."
-    ai_log "Account created and persisted at ${AI_WARP_ACCOUNT}"
+    ai_account_looks_valid || ai_fail "WARP account file looks invalid/corrupt."
+    ai_bind_account_to_host
   fi
 
   if [[ -n "${AI_WARP_LICENSE:-${JOJONET_WARP_LICENSE:-}}" ]]; then
@@ -104,6 +205,7 @@ ai_register_warp() {
     fi
   )
   [[ -s "${AI_WARP_PROFILE}" ]] || ai_fail "Profile generation failed."
+  chmod 600 "${AI_WARP_ACCOUNT}" "${AI_WARP_PROFILE}" 2>/dev/null || true
 }
 
 ai_extract_keys() {

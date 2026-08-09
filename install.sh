@@ -12,7 +12,7 @@
 #
 set -euo pipefail
 
-readonly INSTALLER_VERSION="1.2.4"
+readonly INSTALLER_VERSION="1.2.5"
 AI_WARP_STAGING=""
 readonly GITHUB_USER="${AI_WARP_GITHUB_USER:-b-khaneman}"
 readonly GITHUB_REPO="${AI_WARP_GITHUB_REPO:-JOJOWARP}"
@@ -218,7 +218,9 @@ JOJOWARP installer v${INSTALLER_VERSION} — fully automatic by default
   sudo bash install.sh --menu                         # interactive menu only
   sudo bash install.sh --files-only                   # copy files, no tunnel
   sudo bash install.sh --mode google|ai|full          # choose mode (default: ai)
+  sudo bash install.sh --fresh                        # force brand-new WARP identity
 
+Each server gets its own unique Cloudflare WARP device_id (copied accounts are rejected).
 Safe with JojoNet tunnels + Cloudflare CDN (only AI egress uses WARP).
 EOF
 }
@@ -233,6 +235,10 @@ main() {
       --files-only) action="files"; shift ;;
       --menu) action="menu"; shift ;;
       --install) action="auto"; shift ;;
+      --fresh)
+        export AI_WARP_FRESH=1
+        shift
+        ;;
       --mode)
         [[ -n "${2:-}" ]] || fail "--mode needs a value"
         mode="$2"

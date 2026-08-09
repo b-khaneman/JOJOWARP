@@ -119,6 +119,12 @@ ai_healthcheck() {
   if [[ -f "${AI_WARP_CIDR6_FILE}" ]]; then
     echo "IPv6 CIDRs routed: $(wc -l <"${AI_WARP_CIDR6_FILE}" | tr -d ' ')"
   fi
+  if [[ -s "${AI_WARP_ACCOUNT}" ]]; then
+    echo "device-id : $(awk -F'= *' '/^device_id/{gsub(/"/,"",$2); print $2; exit}' "${AI_WARP_ACCOUNT}" 2>/dev/null || echo —)"
+  fi
+  if [[ -s "${AI_WARP_INSTALL_ID}" ]]; then
+    echo "install-id: $(tr -d '[:space:]' <"${AI_WARP_INSTALL_ID}")"
+  fi
   return "$rc"
 }
 

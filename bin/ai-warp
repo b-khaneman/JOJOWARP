@@ -121,7 +121,7 @@ ai_cmd_install() {
   ai_start_tunnel
   ai_enable_watchdogs
   sleep 2
-  if [[ ! -s "${AI_WARP_STICKY_IP}" ]]; then
+  if [[ ! -s "${AI_WARP_STICKY_IP}" ]] || [[ "${AI_WARP_FRESH:-0}" == "1" ]]; then
     ai_sticky_save force >/dev/null 2>&1 || true
   else
     ai_sticky_save >/dev/null 2>&1 || true
@@ -322,7 +322,7 @@ ${AI_WARP_NAME} v${AI_WARP_VERSION}
 
 Usage:
   jojowarp                     Interactive menu
-  jojowarp install [ai|google|full]
+  jojowarp install [ai|google|full] [--fresh]
   jojowarp status
   jojowarp refresh [--quiet]
   jojowarp restart
@@ -337,6 +337,12 @@ Modes:
   google   Google / Gemini / Flow / Android Studio only
   full     AI + AWS CloudFront CIDRs
 
+Identity (unique per server):
+  Every install registers its own Cloudflare WARP device (device_id).
+  Account is bound to this host fingerprint — copied accounts from another VPS are rejected.
+  Same-host reinstall keeps identity. Force new: --fresh  or  AI_WARP_FRESH=1
+  Adopt unbound legacy account: AI_WARP_KEEP_ACCOUNT=1
+
 Sticky IP:
   Free WARP keeps a persistent account (identity stable across reboots).
   Egress IP is locked to sticky-ip on first success; watchdog monitors drift.
@@ -344,7 +350,7 @@ Sticky IP:
 
 IPv6:
   If WARP provides IPv6, AI v6 prefixes are routed through the tunnel.
-  Otherwise they are blackholed so Happy Eyeballs falls back to IPv4 via WARP.
+  Otherwise they are blackholed / REJECT'd so Happy Eyeballs falls back to IPv4 via WARP.
 
 Support: ${AI_WARP_SUPPORT}
 Repo:    ${AI_WARP_REPO_URL}
@@ -379,7 +385,15 @@ main() {
     -v|--version|version) echo "ai-warp ${AI_WARP_VERSION}" ;;
     install)
       shift || true
-      ai_cmd_install "${1:-ai}"
+      local mode="ai"
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --fresh) export AI_WARP_FRESH=1; shift ;;
+          ai|google|full) mode="$1"; shift ;;
+          *) ai_fail "Unknown install arg: $1" ;;
+        esac
+      done
+      ai_cmd_install "$mode"
       ;;
     status|health|doctor) ai_healthcheck || true ;;
     refresh) ai_cmd_refresh ;;
