@@ -22,6 +22,18 @@ ai_google_routed() {
   ip route get 8.8.8.8 2>/dev/null | grep -q "dev ${AI_WARP_IFACE}"
 }
 
+# Leak = host has global IPv6 and Google v6 still exits via a non-WARP iface.
+ai_google_v6_leaking() {
+  ai_host_has_global_ipv6 || return 1
+  local out
+  out="$(ip -6 route get 2001:4860:4860::8888 2>/dev/null || true)"
+  [[ -n "$out" ]] || return 1
+  echo "$out" | grep -q "dev ${AI_WARP_IFACE}" && return 1
+  echo "$out" | grep -Eiq 'unreachable|prohibit|blackhole' && return 1
+  echo "$out" | grep -Eq 'dev (eth|ens|enp|eno)' && return 0
+  return 1
+}
+
 ai_healthcheck() {
   local rc=0
   echo "=== ${AI_WARP_NAME} health ==="
@@ -79,6 +91,13 @@ ai_healthcheck() {
   else
     ai_warn "Google path NOT via ${AI_WARP_IFACE}"
     rc=1
+  fi
+
+  if ai_google_v6_leaking; then
+    ai_warn "IPv6 Google path leaks via eth (not WARP) — run: sudo jojowarp refresh"
+    rc=1
+  elif ai_host_has_global_ipv6; then
+    ai_log "IPv6 AI leak: blocked (unreachable or via ${AI_WARP_IFACE})"
   fi
 
   if ai_warp_trace_on; then

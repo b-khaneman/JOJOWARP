@@ -6,7 +6,7 @@ One command. Zero prompts. Panel tunnel + Cloudflare CDN stay untouched.
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.2.2** · License: MIT
+Version: **1.2.3** · License: MIT
 
 ---
 
@@ -15,13 +15,13 @@ Version: **1.2.2** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.2" | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.3" | sudo bash
 ```
 
 If GitHub is filtered (may be cached — prefer GitHub raw when possible):
 
 ```bash
-curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.2.2/install.sh" | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.2.3/install.sh" | sudo bash
 ```
 
 Local clone:

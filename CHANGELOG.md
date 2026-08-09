@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.3 — 2026-08-09
+
+### Fixed
+- **IPv6 leak on dual-stack VPS:** eth0 can have IPv6 while WireGuard cannot. AI v6 prefixes are now `unreachable` so Happy Eyeballs falls back to IPv4 via WARP.
+
 ## 1.2.2 — 2026-08-09
 
 ### Fixed

@@ -39,7 +39,7 @@ if [[ -f "${AI_WARP_SHARE}/VERSION" ]]; then
 elif [[ -f "${AI_WARP_SHARE_LIB:-}/VERSION" ]]; then
   AI_WARP_VERSION="$(tr -d '[:space:]' <"${AI_WARP_SHARE_LIB}/VERSION")"
 else
-  AI_WARP_VERSION="${AI_WARP_VERSION_PIN:-1.2.2}"
+  AI_WARP_VERSION="${AI_WARP_VERSION_PIN:-1.2.3}"
 fi
 readonly AI_WARP_VERSION
 
@@ -83,6 +83,10 @@ ai_host_ipv6_enabled() {
   all="$(sysctl -n net.ipv6.conf.all.disable_ipv6 2>/dev/null || echo 1)"
   def="$(sysctl -n net.ipv6.conf.default.disable_ipv6 2>/dev/null || echo 1)"
   [[ "$all" == "0" && "$def" == "0" ]]
+}
+
+ai_host_has_global_ipv6() {
+  ip -6 addr show scope global 2>/dev/null | grep -q 'inet6'
 }
 
 ai_wireguard_supported() {
