@@ -30,6 +30,9 @@ ai_google_v6_leaking() {
   [[ -n "$out" ]] || return 1
   echo "$out" | grep -q "dev ${AI_WARP_IFACE}" && return 1
   echo "$out" | grep -Eiq 'unreachable|prohibit|blackhole' && return 1
+  if command -v ip6tables >/dev/null 2>&1 && ip6tables -L AIWARP6 >/dev/null 2>&1; then
+    return 1
+  fi
   echo "$out" | grep -Eq 'dev (eth|ens|enp|eno)' && return 0
   return 1
 }

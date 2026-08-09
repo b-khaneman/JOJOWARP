@@ -12,7 +12,7 @@
 #
 set -euo pipefail
 
-readonly INSTALLER_VERSION="1.2.3"
+readonly INSTALLER_VERSION="1.2.4"
 AI_WARP_STAGING=""
 readonly GITHUB_USER="${AI_WARP_GITHUB_USER:-b-khaneman}"
 readonly GITHUB_REPO="${AI_WARP_GITHUB_REPO:-JOJOWARP}"

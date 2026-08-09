@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.4 — 2026-08-09
+
+### Fixed
+- **Hetzner IPv6 leak:** proto-static `via fe80::1` on eth0 was winning over unreachable routes. Now also REJECT AI v6 via `ip6tables` chain `AIWARP6` (OUTPUT+FORWARD), plus `metric 1` unreachable routes.
+- `jojowarp update` pulls latest scripts from GitHub raw (bypasses CDN cache).
+
 ## 1.2.3 — 2026-08-09
 
 ### Fixed

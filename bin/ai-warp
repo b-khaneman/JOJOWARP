@@ -188,6 +188,64 @@ ai_cmd_ip() {
   esac
 }
 
+ai_cmd_update() {
+  ai_need_root
+  local base rel dest tmp failed=0
+  base="https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main"
+  ai_info "Updating JOJOWARP scripts from GitHub…"
+  for rel in \
+    VERSION \
+    lib/common.sh \
+    lib/deps.sh \
+    lib/wgcf.sh \
+    lib/routes-build.sh \
+    lib/sticky.sh \
+    lib/health.sh \
+    scripts/routes.sh \
+    bin/ai-warp \
+    conf/ai-domains.txt
+  do
+    tmp="$(mktemp)"
+    if curl -fsSL --connect-timeout 12 --max-time 60 \
+        -H 'Cache-Control: no-cache' \
+        "${base}/${rel}?v=$(date +%s)" -o "$tmp" && [[ -s "$tmp" ]]; then
+      case "$rel" in
+        bin/ai-warp)
+          dest="${AI_WARP_BIN}"
+          install -m755 "$tmp" "$dest"
+          ln -sfn "$dest" /usr/local/bin/jojowarp
+          ;;
+        scripts/routes.sh)
+          dest="${AI_WARP_SHARE}/scripts/routes.sh"
+          install -m755 "$tmp" "$dest"
+          ;;
+        conf/ai-domains.txt)
+          dest="${AI_WARP_SHARE}/conf/ai-domains.txt"
+          install -m644 "$tmp" "$dest"
+          if [[ "${AI_WARP_KEEP_DOMAINS:-0}" != "1" ]]; then
+            install -m644 "$tmp" "${AI_WARP_STATE}/ai-domains.txt"
+          fi
+          ;;
+        VERSION)
+          install -m644 "$tmp" "${AI_WARP_SHARE}/VERSION"
+          ;;
+        *)
+          dest="${AI_WARP_SHARE}/${rel}"
+          install -m644 "$tmp" "$dest"
+          ;;
+      esac
+      ai_log "updated ${rel}"
+    else
+      ai_warn "FAIL ${rel}"
+      failed=1
+    fi
+    rm -f "$tmp"
+  done
+  (( failed == 0 )) || ai_fail "Update incomplete. Retry: jojowarp update"
+  "${AI_WARP_SHARE}/scripts/routes.sh" up
+  ai_log "Update applied. Run: jojowarp status"
+}
+
 ai_cmd_uninstall() {
   ai_need_root
   local purge=0
@@ -270,6 +328,7 @@ Usage:
   jojowarp restart
   jojowarp ip [--relock]
   jojowarp watchdog             (systemd timer)
+  jojowarp update               Pull latest scripts from GitHub
   jojowarp uninstall [--purge]
   jojowarp version
 
@@ -327,6 +386,7 @@ main() {
     restart) ai_cmd_restart ;;
     ip) shift || true; ai_cmd_ip "${1:-}" ;;
     watchdog) ai_need_root; ai_watchdog_tick ;;
+    update) ai_cmd_update ;;
     uninstall)
       shift || true
       ai_cmd_uninstall "${1:-}"
