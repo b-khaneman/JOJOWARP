@@ -1,0 +1,11 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.service text eol=lf
+*.timer text eol=lf
+bin/ai-warp text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.txt text eol=lf
+*.gitignore text eol=lf
+LICENSE text eol=lf
+VERSION text eol=lf
