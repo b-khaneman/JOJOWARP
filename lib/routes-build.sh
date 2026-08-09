@@ -286,6 +286,49 @@ ai_filter_cdn_safe_v6() {
   sort -u -o "$outfile" "$outfile"
 }
 
+ai_meta_fallback_cidrs() {
+  # Meta / Facebook / Instagram (AS32934) — needed for IG Music geo (dynamic CDN hosts).
+  cat <<'EOF'
+31.13.24.0/21
+31.13.64.0/18
+31.13.64.0/19
+45.64.40.0/22
+57.144.0.0/14
+66.220.144.0/20
+69.63.176.0/20
+69.171.224.0/19
+74.119.76.0/22
+102.132.96.0/20
+103.4.96.0/22
+129.134.0.0/16
+157.240.0.0/16
+157.240.0.0/17
+163.70.128.0/17
+173.252.64.0/18
+179.60.192.0/22
+185.60.216.0/22
+185.89.216.0/22
+204.15.20.0/22
+EOF
+}
+
+ai_meta_fallback_cidrs6() {
+  cat <<'EOF'
+2a03:2880::/29
+2a03:2880:f000::/36
+EOF
+}
+
+ai_seed_meta_cidrs() {
+  local family="${1:-v4}"
+  ai_info "Seeding Meta/Instagram ranges (IG Music geo)…"
+  if [[ "$family" == v6 ]]; then
+    ai_meta_fallback_cidrs6
+  else
+    ai_meta_fallback_cidrs
+  fi
+}
+
 ai_google_domain_filter() {
   grep -Ei 'google|gstatic|googleapis|android|gradle|labs\.google|deepmind|gemini|notebooklm|aistudio|recaptcha|geller|aisandbox|alkali|flow|withgoogle' \
     "$1" 2>/dev/null || cat "$1"
@@ -313,9 +356,11 @@ ai_build_cidr_list() {
   esac
 
   if [[ "$mode" == "ai" || "$mode" == "full" ]]; then
-    ai_info "Resolving AI domains (Gemini, Flow, ChatGPT, Claude, …)…"
+    ai_info "Resolving AI + Instagram Music domains…"
     ai_resolve_domains_v4 "${AI_WARP_DOMAINS}" >>"$tmp4" || true
     ai_resolve_domains_v6 "${AI_WARP_DOMAINS}" >>"$tmp6" || true
+    ai_seed_meta_cidrs v4 >>"$tmp4" || true
+    ai_seed_meta_cidrs v6 >>"$tmp6" || true
   elif [[ "$mode" == "google" ]]; then
     gtmp="$(mktemp)"
     ai_google_domain_filter "${AI_WARP_DOMAINS}" >"$gtmp"

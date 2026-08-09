@@ -12,7 +12,7 @@
 #
 set -euo pipefail
 
-readonly INSTALLER_VERSION="1.2.5"
+readonly INSTALLER_VERSION="1.2.6"
 AI_WARP_STAGING=""
 readonly GITHUB_USER="${AI_WARP_GITHUB_USER:-b-khaneman}"
 readonly GITHUB_REPO="${AI_WARP_GITHUB_REPO:-JOJOWARP}"
@@ -264,7 +264,7 @@ main() {
   echo
   echo "╔══════════════════════════════════════════════════════╗"
   echo "║   JOJOWARP v${INSTALLER_VERSION} — نصب خودکار (بدون پرسش)         ║"
-  echo "║   Gemini / Flow / ChatGPT / Claude / …               ║"
+  echo "║   Gemini / Flow / ChatGPT / Claude / IG Music / …    ║"
   echo "╚══════════════════════════════════════════════════════╝"
   echo
   info "حالت: ${mode}  |  CDN کلودفلر و تانل پنل دست نمی‌خورند"

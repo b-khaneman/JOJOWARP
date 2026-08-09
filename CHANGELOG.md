@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.6 — 2026-08-09
+
+### Added
+- **Instagram Music unlock:** Meta/Instagram/Facebook hosts + AS32934 CIDR seed, plus Spotify/Apple Music preview endpoints used by the IG music catalog.
+- Default `ai` mode now routes IG Music geo-checks via WARP (phone/client must egress through this Kharej VPS).
+
 ## 1.2.5 — 2026-08-09
 
 ### Added

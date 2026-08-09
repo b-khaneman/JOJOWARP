@@ -1,12 +1,12 @@
 # JOJOWARP
 
-Selective **Cloudflare WARP** unlock for **Gemini / Google Flow / ChatGPT / Claude / Copilot / …** on a Kharej (Ubuntu) VPS.
+Selective **Cloudflare WARP** unlock for **Gemini / Google Flow / ChatGPT / Claude / Instagram Music / …** on a Kharej (Ubuntu) VPS.
 
 One command. Zero prompts. Panel tunnel + Cloudflare CDN stay untouched.
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.2.5** · License: MIT
+Version: **1.2.6** · License: MIT
 
 ---
 
@@ -15,13 +15,13 @@ Version: **1.2.5** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.5" | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.6" | sudo bash
 ```
 
 If GitHub is filtered (may be cached — prefer GitHub raw when possible):
 
 ```bash
-curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.2.5/install.sh" | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.2.6/install.sh" | sudo bash
 ```
 
 Local clone:
@@ -42,6 +42,7 @@ This installs packages, registers a persistent WARP account, builds AI routes (I
 | Cloudflare edge **blocks** | Direct (not hijacked) |
 | Gemini / Flow / Google AI | WARP |
 | ChatGPT / Claude / Copilot / … | WARP (`/32` + `/128` host routes, even on CF anycast) |
+| Instagram Music / Reels audio | WARP (Meta AS32934 + IG/FB hosts) |
 
 WireGuard uses `Table = off` — **no default-route steal**. Only listed AI destinations leave via WARP.
 
@@ -96,7 +97,7 @@ Every install calls Cloudflare and creates a **new WARP device** (`device_id`) f
 ```bash
 sudo jojowarp install --fresh
 # or:
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.5" | sudo bash -s -- --fresh
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.6" | sudo bash -s -- --fresh
 ```
 
 ---
