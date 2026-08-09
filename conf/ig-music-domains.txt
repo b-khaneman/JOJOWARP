@@ -1,0 +1,23 @@
+# Optional Instagram Music hosts — ONLY loaded when AI_WARP_IG_MUSIC=1
+# WARNING: routing Meta/IG via WARP often raises ping and still fails on the
+# mobile app (music geo uses phone IP / SIM / account region, not just VPS egress).
+# Prefer a dedicated residential VPN on the phone for IG Music.
+
+instagram.com
+www.instagram.com
+i.instagram.com
+b.i.instagram.com
+graph.instagram.com
+gateway.instagram.com
+api.instagram.com
+scontent.cdninstagram.com
+scontent.xx.fbcdn.net
+static.cdninstagram.com
+lookaside.fbsbx.com
+facebook.com
+www.facebook.com
+graph.facebook.com
+connect.facebook.net
+static.xx.fbcdn.net
+api.spotify.com
+spclient.wg.spotify.com

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.7 — 2026-08-09
+
+### Fixed
+- **High ping / unstable configs:** Meta/Instagram AS32934 bulk routes removed from the default path (they flooded the routing table and pushed panel traffic through WARP).
+- Instagram Music is **opt-in only** (`AI_WARP_IG_MUSIC=1`) — mobile IG music often still fails without a phone-side residential VPN.
+
 ## 1.2.6 — 2026-08-09
 
 ### Added

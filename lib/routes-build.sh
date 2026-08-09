@@ -287,41 +287,28 @@ ai_filter_cdn_safe_v6() {
 }
 
 ai_meta_fallback_cidrs() {
-  # Meta / Facebook / Instagram (AS32934) — needed for IG Music geo (dynamic CDN hosts).
+  # Meta / Facebook / Instagram (AS32934) — OPTIONAL only (AI_WARP_IG_MUSIC=1).
+  # Do NOT enable by default: large prefixes inflate the route table and raise ping.
   cat <<'EOF'
-31.13.24.0/21
 31.13.64.0/18
-31.13.64.0/19
-45.64.40.0/22
 57.144.0.0/14
-66.220.144.0/20
-69.63.176.0/20
-69.171.224.0/19
-74.119.76.0/22
-102.132.96.0/20
-103.4.96.0/22
 129.134.0.0/16
 157.240.0.0/16
-157.240.0.0/17
-163.70.128.0/17
 173.252.64.0/18
 179.60.192.0/22
 185.60.216.0/22
-185.89.216.0/22
-204.15.20.0/22
 EOF
 }
 
 ai_meta_fallback_cidrs6() {
   cat <<'EOF'
-2a03:2880::/29
-2a03:2880:f000::/36
+2a03:2880::/32
 EOF
 }
 
 ai_seed_meta_cidrs() {
   local family="${1:-v4}"
-  ai_info "Seeding Meta/Instagram ranges (IG Music geo)…"
+  ai_warn "IG Music opt-in: seeding Meta ranges (may increase latency)…"
   if [[ "$family" == v6 ]]; then
     ai_meta_fallback_cidrs6
   else
@@ -336,7 +323,7 @@ ai_google_domain_filter() {
 
 ai_build_cidr_list() {
   local mode="${1:-ai}"
-  local tmp4 tmp6 filtered4 filtered6 gtmp count4 count6
+  local tmp4 tmp6 filtered4 filtered6 gtmp count4 count6 igfile
   tmp4="$(mktemp)"
   tmp6="$(mktemp)"
   filtered4="$(mktemp)"
@@ -356,11 +343,9 @@ ai_build_cidr_list() {
   esac
 
   if [[ "$mode" == "ai" || "$mode" == "full" ]]; then
-    ai_info "Resolving AI + Instagram Music domains…"
+    ai_info "Resolving AI domains (Gemini, Flow, ChatGPT, Claude, …)…"
     ai_resolve_domains_v4 "${AI_WARP_DOMAINS}" >>"$tmp4" || true
     ai_resolve_domains_v6 "${AI_WARP_DOMAINS}" >>"$tmp6" || true
-    ai_seed_meta_cidrs v4 >>"$tmp4" || true
-    ai_seed_meta_cidrs v6 >>"$tmp6" || true
   elif [[ "$mode" == "google" ]]; then
     gtmp="$(mktemp)"
     ai_google_domain_filter "${AI_WARP_DOMAINS}" >"$gtmp"
@@ -368,6 +353,20 @@ ai_build_cidr_list() {
     ai_resolve_domains_v4 "$gtmp" >>"$tmp4" || true
     ai_resolve_domains_v6 "$gtmp" >>"$tmp6" || true
     rm -f "$gtmp"
+  fi
+
+  # Instagram Music is OFF by default — enabling Meta AS routes hurts panel latency.
+  if [[ "${AI_WARP_IG_MUSIC:-0}" == "1" && ( "$mode" == "ai" || "$mode" == "full" ) ]]; then
+    igfile="${AI_WARP_SHARE}/conf/ig-music-domains.txt"
+    [[ -f "$igfile" ]] || igfile="${AI_WARP_SHARE_LIB:-}/conf/ig-music-domains.txt"
+    [[ -f /etc/ai-warp/ig-music-domains.txt ]] && igfile="/etc/ai-warp/ig-music-domains.txt"
+    if [[ -f "$igfile" ]]; then
+      ai_info "IG Music opt-in: resolving ${igfile}…"
+      ai_resolve_domains_v4 "$igfile" >>"$tmp4" || true
+      ai_resolve_domains_v6 "$igfile" >>"$tmp6" || true
+    fi
+    ai_seed_meta_cidrs v4 >>"$tmp4" || true
+    ai_seed_meta_cidrs v6 >>"$tmp6" || true
   fi
 
   if [[ "$mode" == "full" ]]; then

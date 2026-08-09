@@ -12,7 +12,7 @@
 #
 set -euo pipefail
 
-readonly INSTALLER_VERSION="1.2.6"
+readonly INSTALLER_VERSION="1.2.7"
 AI_WARP_STAGING=""
 readonly GITHUB_USER="${AI_WARP_GITHUB_USER:-b-khaneman}"
 readonly GITHUB_REPO="${AI_WARP_GITHUB_REPO:-JOJOWARP}"
@@ -118,6 +118,7 @@ PACKAGE_FILES=(
   VERSION
   LICENSE
   conf/ai-domains.txt
+  conf/ig-music-domains.txt
   lib/common.sh
   lib/deps.sh
   lib/wgcf.sh
@@ -193,6 +194,7 @@ install_tree() {
   install -m644 "${staging}/VERSION" "${share}/VERSION"
   install -m644 "${staging}/LICENSE" "${share}/LICENSE"
   install -m644 "${staging}/conf/ai-domains.txt" "${share}/conf/ai-domains.txt"
+  install -m644 "${staging}/conf/ig-music-domains.txt" "${share}/conf/ig-music-domains.txt"
   install -m644 "${staging}/lib/"*.sh "${share}/lib/"
   install -m755 "${staging}/scripts/routes.sh" "${share}/scripts/routes.sh"
   install -m644 "${staging}/systemd/"* "${share}/systemd/"
@@ -264,7 +266,7 @@ main() {
   echo
   echo "╔══════════════════════════════════════════════════════╗"
   echo "║   JOJOWARP v${INSTALLER_VERSION} — نصب خودکار (بدون پرسش)         ║"
-  echo "║   Gemini / Flow / ChatGPT / Claude / IG Music / …    ║"
+  echo "║   Gemini / Flow / ChatGPT / Claude / …               ║"
   echo "╚══════════════════════════════════════════════════════╝"
   echo
   info "حالت: ${mode}  |  CDN کلودفلر و تانل پنل دست نمی‌خورند"

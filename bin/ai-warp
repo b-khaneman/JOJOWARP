@@ -203,7 +203,8 @@ ai_cmd_update() {
     lib/health.sh \
     scripts/routes.sh \
     bin/ai-warp \
-    conf/ai-domains.txt
+    conf/ai-domains.txt \
+    conf/ig-music-domains.txt
   do
     tmp="$(mktemp)"
     if curl -fsSL --connect-timeout 12 --max-time 60 \
@@ -219,14 +220,18 @@ ai_cmd_update() {
           dest="${AI_WARP_SHARE}/scripts/routes.sh"
           install -m755 "$tmp" "$dest"
           ;;
-        conf/ai-domains.txt)
+    conf/ai-domains.txt)
           dest="${AI_WARP_SHARE}/conf/ai-domains.txt"
           install -m644 "$tmp" "$dest"
           if [[ "${AI_WARP_KEEP_DOMAINS:-0}" != "1" ]]; then
             install -m644 "$tmp" "${AI_WARP_STATE}/ai-domains.txt"
           fi
           ;;
-        VERSION)
+    conf/ig-music-domains.txt)
+          dest="${AI_WARP_SHARE}/conf/ig-music-domains.txt"
+          install -m644 "$tmp" "$dest"
+          ;;
+    VERSION)
           install -m644 "$tmp" "${AI_WARP_SHARE}/VERSION"
           ;;
         *)

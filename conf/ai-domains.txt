@@ -114,55 +114,6 @@ meta.ai
 www.meta.ai
 api.meta.ai
 
-# ── Instagram Music / Reels audio (geo) ──────────────────────────
-# Music catalog + API geo-check; Meta CDN ranges also seeded in routes-build.
-instagram.com
-www.instagram.com
-i.instagram.com
-b.i.instagram.com
-graph.instagram.com
-gateway.instagram.com
-api.instagram.com
-www.api.instagram.com
-instagram.facebook.com
-workers.instagram.com
-help.instagram.com
-about.instagram.com
-scontent.cdninstagram.com
-scontent.xx.fbcdn.net
-static.cdninstagram.com
-instagram.fna.fbcdn.net
-z-p3-scontent.xx.fbcdn.net
-z-m-scontent.xx.fbcdn.net
-lookaside.fbsbx.com
-lookaside.instagram.com
-facebook.com
-www.facebook.com
-m.facebook.com
-web.facebook.com
-graph.facebook.com
-b-graph.facebook.com
-edge-mqtt.facebook.com
-mqtt-mini.facebook.com
-gateway.facebook.com
-connect.facebook.net
-static.xx.fbcdn.net
-scontent.fbcdn.net
-external.xx.fbcdn.net
-video.xx.fbcdn.net
-rupload.facebook.com
-upload.facebook.com
-# Spotify / Apple pieces used by Instagram Music catalog previews
-api.spotify.com
-spclient.wg.spotify.com
-gew1-spclient.spotify.com
-audio-ak.spotify.com
-audio4-ak.spotify.com
-apresolve.spotify.com
-login5.spotify.com
-itunes.apple.com
-amp-api.music.apple.com
-
 # ── Perplexity ──────────────────────────────────────────────────
 perplexity.ai
 www.perplexity.ai
