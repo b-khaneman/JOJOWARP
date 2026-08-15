@@ -1,12 +1,12 @@
 # JOJOWARP
 
-Selective **Cloudflare WARP** unlock for **Gemini / Google Flow / ChatGPT / Claude / Copilot / …** on a Kharej (Ubuntu) VPS.
+Selective **Cloudflare WARP** for **`geosite:google-deepmind`** (Gemini / Flow / NotebookLM / Jules / …) on a Kharej Ubuntu VPS.
 
-One command. Zero prompts. Panel tunnel + Cloudflare CDN stay untouched.
+Default path: **only Google AI host `/32`s** via WARP — not the entire Google IP space (that killed ping).
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.2.7** · License: MIT
+Version: **1.3.0** · License: MIT
 
 ---
 
@@ -15,13 +15,13 @@ Version: **1.2.7** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.7" | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.0" | sudo bash
 ```
 
-If GitHub is filtered (may be cached — prefer GitHub raw when possible):
+If GitHub is filtered:
 
 ```bash
-curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.2.7/install.sh" | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.0/install.sh" | sudo bash
 ```
 
 Local clone:
@@ -38,14 +38,14 @@ This installs packages, registers a persistent WARP account, builds AI routes (I
 
 | Traffic | Path |
 |---------|------|
-| Panel / tunnel / your CDN | Direct (unchanged) |
-| Cloudflare edge **blocks** | Direct (not hijacked) |
-| Gemini / Flow / Google AI | WARP |
-| ChatGPT / Claude / Copilot / … | WARP (`/32` + `/128` host routes, even on CF anycast) |
+| Panel / tunnel / your CDN | Direct |
+| Cloudflare edge **blocks** | Direct |
+| `geosite:google-deepmind` (Gemini / Flow / NotebookLM / …) | WARP (`/32` only) |
+| Rest of Google / YouTube / GCP | Direct (not the whole goog.json table) |
 
-WireGuard uses `Table = off` — **no default-route steal**. Only listed AI destinations leave via WARP.
+WireGuard uses `Table = off` — **no default-route steal**.
 
-**IPv6:** if WARP gives you a v6 address, AI v6 prefixes go through the tunnel. If not, those prefixes are blackholed so Happy Eyeballs falls back to IPv4 via WARP (no IPv6 leak).
+**IPv6:** if WARP has no v6, AI v6 prefixes are blackholed / REJECT'd so Happy Eyeballs uses IPv4 via WARP.
 
 ---
 
@@ -66,20 +66,35 @@ jojowarp uninstall --purge
 
 ## Modes
 
-Default: all AIs (`ai`)
+Default: **`google`** = `geosite:google-deepmind`
 
 ```bash
-sudo bash install.sh --mode google
+sudo bash install.sh --mode google     # recommended
+sudo bash install.sh --mode ai         # DeepMind + ChatGPT/Claude/…
 sudo bash install.sh --mode full
-sudo bash install.sh --menu
-sudo bash install.sh --files-only
 ```
 
 | Mode | What goes via WARP |
 |------|--------------------|
-| `ai` | Google AI ranges + resolved AI domains (recommended) |
-| `google` | Google / Gemini / Flow / Android Studio only |
-| `full` | AI + AWS CloudFront prefixes |
+| `google` | Official DeepMind geosite hosts resolved to `/32` (low ping) |
+| `ai` | DeepMind + ChatGPT / Claude / Copilot / other AI hostnames |
+| `full` | `ai` + AWS CloudFront prefixes |
+
+Do **not** set `AI_WARP_GOOGLE_CIDRS=1` unless you accept high ping (dumps all Google IP ranges).
+
+### Panel routing (Xray / sing-box)
+
+On the **client inbound** routing, send Google AI through the Kharej outbound (this VPS):
+
+```json
+{
+  "type": "field",
+  "domain": ["geosite:google-deepmind"],
+  "outboundTag": "PROXY"
+}
+```
+
+sing-box equivalent: `rule_set` / `geosite-google-deepmind` → the same proxy outbound.
 
 ---
 
@@ -96,7 +111,7 @@ Every install calls Cloudflare and creates a **new WARP device** (`device_id`) f
 ```bash
 sudo jojowarp install --fresh
 # or:
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.2.7" | sudo bash -s -- --fresh
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.0" | sudo bash -s -- --fresh
 ```
 
 ---

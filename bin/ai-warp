@@ -97,11 +97,12 @@ ai_enable_watchdogs() {
 }
 
 ai_cmd_install() {
-  local mode="${1:-ai}"
+  local mode="${1:-google}"
   ai_need_root
+  [[ "$mode" == "deepmind" ]] && mode="google"
   case "$mode" in
     ai|google|full) ;;
-    *) ai_fail "Unknown mode: $mode (ai|google|full)" ;;
+    *) ai_fail "Unknown mode: $mode (google|ai|full)" ;;
   esac
 
   if [[ "${AI_WARP_AUTO:-0}" != "1" ]]; then
@@ -146,7 +147,7 @@ EOF
 ai_cmd_refresh() {
   ai_need_root
   local mode
-  mode="$(cat "${AI_WARP_MODE_FILE}" 2>/dev/null || echo ai)"
+  mode="$(cat "${AI_WARP_MODE_FILE}" 2>/dev/null || echo google)"
   ai_qinfo "Refreshing routes (mode=${mode})…"
   [[ -x "${AI_WARP_WGCF}" ]] || ai_install_wgcf
   [[ -s "${AI_WARP_ACCOUNT}" ]] || ai_fail "Not installed. Run: ai-warp install"
@@ -204,6 +205,7 @@ ai_cmd_update() {
     scripts/routes.sh \
     bin/ai-warp \
     conf/ai-domains.txt \
+    conf/google-deepmind.txt \
     conf/ig-music-domains.txt
   do
     tmp="$(mktemp)"
@@ -226,6 +228,11 @@ ai_cmd_update() {
           if [[ "${AI_WARP_KEEP_DOMAINS:-0}" != "1" ]]; then
             install -m644 "$tmp" "${AI_WARP_STATE}/ai-domains.txt"
           fi
+          ;;
+    conf/google-deepmind.txt)
+          dest="${AI_WARP_SHARE}/conf/google-deepmind.txt"
+          install -m644 "$tmp" "$dest"
+          install -m644 "$tmp" "${AI_WARP_STATE}/google-deepmind.txt"
           ;;
     conf/ig-music-domains.txt)
           dest="${AI_WARP_SHARE}/conf/ig-music-domains.txt"
@@ -288,8 +295,8 @@ ai_menu() {
   ai_banner
   cat <<EOF
 
-  1) Install — ALL AI (Gemini, Flow, ChatGPT, Claude, Copilot, …)  [recommended]
-  2) Install — Google family only (Gemini / Flow / Android Studio)
+  1) Install — geosite:google-deepmind (Gemini / Flow / NotebookLM)  [recommended]
+  2) Install — ALL AI (DeepMind + ChatGPT / Claude / Copilot / …)
   3) Install — Full (AI + CloudFront CDN ranges)
   4) Status / health
   5) Refresh routes
@@ -302,8 +309,8 @@ EOF
   local c
   read -rp "Select: " c
   case "$c" in
-    1) ai_cmd_install ai ;;
-    2) ai_cmd_install google ;;
+    1) ai_cmd_install google ;;
+    2) ai_cmd_install ai ;;
     3) ai_cmd_install full ;;
     4) ai_healthcheck || true ;;
     5) ai_cmd_refresh ;;
@@ -327,7 +334,7 @@ ${AI_WARP_NAME} v${AI_WARP_VERSION}
 
 Usage:
   jojowarp                     Interactive menu
-  jojowarp install [ai|google|full] [--fresh]
+  jojowarp install [google|ai|full] [--fresh]
   jojowarp status
   jojowarp refresh [--quiet]
   jojowarp restart
@@ -338,8 +345,8 @@ Usage:
   jojowarp version
 
 Modes:
-  ai       All AI services via WARP (default) — Gemini, Flow, OpenAI, Claude, …
-  google   Google / Gemini / Flow / Android Studio only
+  google   geosite:google-deepmind only (default) — Gemini, Flow, NotebookLM, Jules, …
+  ai       DeepMind + ChatGPT / Claude / Copilot / other AIs
   full     AI + AWS CloudFront CIDRs
 
 Identity (unique per server):
@@ -378,7 +385,7 @@ main() {
 
   if [[ $# -eq 0 ]]; then
     if [[ "${AI_WARP_AUTO:-0}" == "1" ]] || [[ ! -t 0 ]]; then
-      ai_cmd_install ai
+      ai_cmd_install google
       return 0
     fi
     ai_menu
@@ -390,11 +397,15 @@ main() {
     -v|--version|version) echo "ai-warp ${AI_WARP_VERSION}" ;;
     install)
       shift || true
-      local mode="ai"
+      local mode="google"
       while [[ $# -gt 0 ]]; do
         case "$1" in
           --fresh) export AI_WARP_FRESH=1; shift ;;
-          ai|google|full) mode="$1"; shift ;;
+          ai|google|deepmind|full)
+            mode="$1"
+            [[ "$mode" == "deepmind" ]] && mode="google"
+            shift
+            ;;
           *) ai_fail "Unknown install arg: $1" ;;
         esac
       done

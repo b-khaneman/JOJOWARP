@@ -41,7 +41,7 @@ if [[ -f "${AI_WARP_SHARE}/VERSION" ]]; then
 elif [[ -f "${AI_WARP_SHARE_LIB:-}/VERSION" ]]; then
   AI_WARP_VERSION="$(tr -d '[:space:]' <"${AI_WARP_SHARE_LIB}/VERSION")"
 else
-  AI_WARP_VERSION="${AI_WARP_VERSION_PIN:-1.2.7}"
+  AI_WARP_VERSION="${AI_WARP_VERSION_PIN:-1.3.0}"
 fi
 readonly AI_WARP_VERSION
 

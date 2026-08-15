@@ -12,7 +12,7 @@
 #
 set -euo pipefail
 
-readonly INSTALLER_VERSION="1.2.7"
+readonly INSTALLER_VERSION="1.3.0"
 AI_WARP_STAGING=""
 readonly GITHUB_USER="${AI_WARP_GITHUB_USER:-b-khaneman}"
 readonly GITHUB_REPO="${AI_WARP_GITHUB_REPO:-JOJOWARP}"
@@ -118,6 +118,7 @@ PACKAGE_FILES=(
   VERSION
   LICENSE
   conf/ai-domains.txt
+  conf/google-deepmind.txt
   conf/ig-music-domains.txt
   lib/common.sh
   lib/deps.sh
@@ -194,6 +195,7 @@ install_tree() {
   install -m644 "${staging}/VERSION" "${share}/VERSION"
   install -m644 "${staging}/LICENSE" "${share}/LICENSE"
   install -m644 "${staging}/conf/ai-domains.txt" "${share}/conf/ai-domains.txt"
+  install -m644 "${staging}/conf/google-deepmind.txt" "${share}/conf/google-deepmind.txt"
   install -m644 "${staging}/conf/ig-music-domains.txt" "${share}/conf/ig-music-domains.txt"
   install -m644 "${staging}/lib/"*.sh "${share}/lib/"
   install -m755 "${staging}/scripts/routes.sh" "${share}/scripts/routes.sh"
@@ -219,7 +221,7 @@ JOJOWARP installer v${INSTALLER_VERSION} — fully automatic by default
   sudo bash install.sh                                # same (auto)
   sudo bash install.sh --menu                         # interactive menu only
   sudo bash install.sh --files-only                   # copy files, no tunnel
-  sudo bash install.sh --mode google|ai|full          # choose mode (default: ai)
+  sudo bash install.sh --mode google|ai|full          # default: google (geosite:google-deepmind)
   sudo bash install.sh --fresh                        # force brand-new WARP identity
 
 Each server gets its own unique Cloudflare WARP device_id (copied accounts are rejected).
@@ -228,7 +230,7 @@ EOF
 }
 
 main() {
-  local action="auto" mode="ai" local_root
+  local action="auto" mode="google" local_root
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -244,14 +246,17 @@ main() {
       --mode)
         [[ -n "${2:-}" ]] || fail "--mode needs a value"
         mode="$2"
+        [[ "$mode" == "deepmind" ]] && mode="google"
         shift 2
         ;;
       --mode=*)
         mode="${1#--mode=}"
+        [[ "$mode" == "deepmind" ]] && mode="google"
         shift
         ;;
-      ai|google|full)
+      ai|google|deepmind|full)
         mode="$1"
+        [[ "$mode" == "deepmind" ]] && mode="google"
         shift
         ;;
       *) fail "Unknown arg: $1 (see --help)" ;;

@@ -316,13 +316,56 @@ ai_seed_meta_cidrs() {
   fi
 }
 
-ai_google_domain_filter() {
-  grep -Ei 'google|gstatic|googleapis|android|gradle|labs\.google|deepmind|gemini|notebooklm|aistudio|recaptcha|geller|aisandbox|alkali|flow|withgoogle' \
-    "$1" 2>/dev/null || cat "$1"
+ai_parse_geosite_hosts() {
+  local line host
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%#*}"
+    line="${line//[[:space:]]/}"
+    [[ -z "$line" ]] && continue
+    [[ "$line" == include:* ]] && continue
+    host="${line#full:}"
+    host="${host%%@*}"
+    host="${host#domain:}"
+    host="${host#regexp:}"
+    [[ -z "$host" ]] && continue
+    printf '%s\n' "$host"
+  done
+}
+
+ai_deepmind_file() {
+  if [[ -f "${AI_WARP_STATE}/google-deepmind.txt" ]]; then
+    echo "${AI_WARP_STATE}/google-deepmind.txt"
+  elif [[ -f "${AI_WARP_SHARE}/conf/google-deepmind.txt" ]]; then
+    echo "${AI_WARP_SHARE}/conf/google-deepmind.txt"
+  else
+    echo "${AI_WARP_SHARE_LIB:-.}/conf/google-deepmind.txt"
+  fi
+}
+
+# Live geosite:google-deepmind + bundled fallback. Writes host list to $1.
+ai_load_deepmind_hosts() {
+  local out="$1" raw bundled
+  bundled="$(ai_deepmind_file)"
+  raw="$(mktemp)"
+  : >"$out"
+  if curl -fsSL --connect-timeout 10 --max-time 30 \
+      -H 'Cache-Control: no-cache' \
+      "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google-deepmind" \
+      -o "$raw" && [[ -s "$raw" ]]; then
+    ai_parse_geosite_hosts <"$raw" >>"$out"
+    ai_info "Loaded live geosite:google-deepmind"
+  else
+    ai_warn "Live geosite unreachable — using bundled google-deepmind.txt"
+  fi
+  rm -f "$raw"
+  if [[ -f "$bundled" ]]; then
+    ai_parse_geosite_hosts <"$bundled" >>"$out"
+  fi
+  sort -u -o "$out" "$out"
 }
 
 ai_build_cidr_list() {
-  local mode="${1:-ai}"
+  local mode="${1:-google}"
   local tmp4 tmp6 filtered4 filtered6 gtmp count4 count6 igfile
   tmp4="$(mktemp)"
   tmp6="$(mktemp)"
@@ -333,23 +376,35 @@ ai_build_cidr_list() {
   install -d -m700 "${AI_WARP_STATE}"
 
   case "$mode" in
-    ai|google|full)
-      ai_fetch_google_cidrs v4 >>"$tmp4" || true
-      ai_fetch_google_cidrs v6 >>"$tmp6" || true
-      ;;
+    google|deepmind|ai|full) ;;
     *)
       ai_fail "Unknown mode: $mode"
       ;;
   esac
+  [[ "$mode" == "deepmind" ]] && mode="google"
 
-  if [[ "$mode" == "ai" || "$mode" == "full" ]]; then
+  # Entire goog.json (~thousands of GCP prefixes) DESTROYS panel ping.
+  # Only dump it when explicitly requested.
+  if [[ "${AI_WARP_GOOGLE_CIDRS:-0}" == "1" ]]; then
+    ai_warn "AI_WARP_GOOGLE_CIDRS=1 — seeding official Google IP ranges (higher latency)…"
+    ai_fetch_google_cidrs v4 >>"$tmp4" || true
+    ai_fetch_google_cidrs v6 >>"$tmp6" || true
+  fi
+
+  if [[ "$mode" == "google" ]]; then
+    gtmp="$(mktemp)"
+    ai_info "Resolving geosite:google-deepmind (Gemini / Flow / NotebookLM / …)…"
+    ai_load_deepmind_hosts "$gtmp"
+    ai_resolve_domains_v4 "$gtmp" >>"$tmp4" || true
+    ai_resolve_domains_v6 "$gtmp" >>"$tmp6" || true
+    cp -f "$gtmp" "${AI_WARP_STATE}/google-deepmind.txt"
+    rm -f "$gtmp"
+  elif [[ "$mode" == "ai" || "$mode" == "full" ]]; then
     ai_info "Resolving AI domains (Gemini, Flow, ChatGPT, Claude, …)…"
     ai_resolve_domains_v4 "${AI_WARP_DOMAINS}" >>"$tmp4" || true
     ai_resolve_domains_v6 "${AI_WARP_DOMAINS}" >>"$tmp6" || true
-  elif [[ "$mode" == "google" ]]; then
     gtmp="$(mktemp)"
-    ai_google_domain_filter "${AI_WARP_DOMAINS}" >"$gtmp"
-    ai_info "Resolving Google / Flow / Android domains…"
+    ai_load_deepmind_hosts "$gtmp"
     ai_resolve_domains_v4 "$gtmp" >>"$tmp4" || true
     ai_resolve_domains_v6 "$gtmp" >>"$tmp6" || true
     rm -f "$gtmp"
@@ -399,12 +454,9 @@ ai_build_cidr_list() {
 
   count4="$(wc -l <"${AI_WARP_CIDR_FILE}" | tr -d ' ')"
   count6="$(wc -l <"${AI_WARP_CIDR6_FILE}" | tr -d ' ')"
-  if (( count4 < 5 )); then
-    ai_warn "IPv4 CIDR list small ($count4) — seeding Google fallback."
-    ai_google_fallback_cidrs >"${AI_WARP_CIDR_FILE}"
-    count4="$(wc -l <"${AI_WARP_CIDR_FILE}" | tr -d ' ')"
+  if (( count4 < 1 )); then
+    ai_fail "Could not build IPv4 route list (DNS resolve failed)."
   fi
-  (( count4 >= 5 )) || ai_fail "Could not build IPv4 route list."
   echo "$mode" >"${AI_WARP_MODE_FILE}"
-  ai_log "Route targets: ${count4} IPv4 + ${count6} IPv6 (Cloudflare CDN blocks excluded)"
+  ai_log "Route targets: ${count4} IPv4 + ${count6} IPv6 (DeepMind /32s — no full Google CIDR dump)"
 }

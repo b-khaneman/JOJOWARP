@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — 2026-08-16
+
+### Changed
+- **Default mode is `google`:** routes **`geosite:google-deepmind`** (Gemini, Flow, NotebookLM, Jules, AI Studio, …) via WARP.
+- **No more default goog.json dump.** Entire Google/GCP CIDRs were the main ping killer. Host `/32`s only.
+- Live fetch of v2fly `data/google-deepmind` on each refresh, with bundled fallback.
+
+### Panel
+- Document Xray rule: `geosite:google-deepmind` → Kharej/WARP outbound.
+
 ## 1.2.7 — 2026-08-09
 
 ### Fixed
