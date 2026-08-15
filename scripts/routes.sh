@@ -27,7 +27,23 @@ iter_v6_cidrs() {
   done <"$CIDR6_FILE"
 }
 
-# Older JOJOWARP versions dumped Google DNS + whole Google IPv6 into the table.
+# Flush leftover /32s and CIDRs from older JOJOWARP (goog.json, 8.8.8.0/24, Meta…).
+# Keep kernel connected routes (the WARP address).
+flush_iface_routes() {
+  local dest rest
+  while read -r dest rest; do
+    [[ -z "$dest" || "$dest" == default ]] && continue
+    echo " $rest " | grep -q ' proto kernel ' && continue
+    ip route del "$dest" dev "$IFACE" 2>/dev/null || true
+  done < <(ip -4 route show dev "$IFACE" 2>/dev/null || true)
+
+  while read -r dest rest; do
+    [[ -z "$dest" || "$dest" == default ]] && continue
+    echo " $rest " | grep -q ' proto kernel ' && continue
+    ip -6 route del "$dest" dev "$IFACE" 2>/dev/null || true
+  done < <(ip -6 route show dev "$IFACE" 2>/dev/null || true)
+}
+
 cleanup_legacy_bulk() {
   local p
   for p in 8.8.8.0/24 8.8.4.0/24 8.8.8.8/32 8.8.4.4/32; do
@@ -46,6 +62,7 @@ add_v4() {
   [[ -f "$CIDR_FILE" ]] || { echo "missing $CIDR_FILE" >&2; exit 1; }
   ip link show "$IFACE" >/dev/null
   cleanup_legacy_bulk
+  flush_iface_routes
 
   sysctl -w "net.ipv4.conf.${IFACE}.rp_filter=0" >/dev/null 2>&1 || true
 
@@ -131,7 +148,12 @@ add_v6() {
     done < <(iter_v6_cidrs | sort -u)
   fi
   echo "ai-warp routes v6 (${mode}): ok=${ok} fail=${fail}"
-  add_v6_filter
+  # REJECT only when WARP has no IPv6 — otherwise we would block the tunnel itself.
+  if [[ "$mode" == "unreachable" ]]; then
+    add_v6_filter
+  else
+    flush_ip6_chain
+  fi
 }
 
 del_v4() {

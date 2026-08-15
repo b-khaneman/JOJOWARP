@@ -151,9 +151,12 @@ ai_cmd_refresh() {
   ai_qinfo "Refreshing routes (mode=${mode})…"
   [[ -x "${AI_WARP_WGCF}" ]] || ai_install_wgcf
   [[ -s "${AI_WARP_ACCOUNT}" ]] || ai_fail "Not installed. Run: ai-warp install"
-  ai_build_cidr_list "$mode"
+  # Tear down OLD prefixes first (file still has previous CIDRs).
   if ai_iface_up; then
     "${AI_WARP_SHARE}/scripts/routes.sh" down 2>/dev/null || true
+  fi
+  ai_build_cidr_list "$mode"
+  if ai_iface_up; then
     "${AI_WARP_SHARE}/scripts/routes.sh" up
   else
     ai_start_tunnel

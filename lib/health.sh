@@ -3,7 +3,9 @@
 # shellcheck shell=bash
 
 ai_iface_up() {
-  ip link show "${AI_WARP_IFACE}" >/dev/null 2>&1
+  local st
+  st="$(cat /sys/class/net/${AI_WARP_IFACE}/operstate 2>/dev/null || true)"
+  [[ "$st" == "up" || "$st" == "unknown" ]]
 }
 
 # Handshake is OK if unix timestamp is within the last 3 minutes.
@@ -109,8 +111,7 @@ ai_healthcheck() {
   if ai_warp_trace_on; then
     ai_log "cloudflare trace: warp=on"
   else
-    ai_warn "cloudflare trace: warp≠on"
-    rc=1
+    ai_warn "cloudflare trace: warp≠on (informational — CF is not a DeepMind route)"
   fi
 
   echo
@@ -159,16 +160,13 @@ ai_watchdog_tick() {
   fi
 
   if ai_iface_up && ! ai_google_routed; then
-    logger -t ai-warp "watchdog: routes missing — re-applying"
+    logger -t ai-warp "watchdog: DeepMind routes missing — re-applying"
     "${AI_WARP_SHARE}/scripts/routes.sh" up 2>/dev/null || true
   fi
 
-  if ai_iface_up && ! ai_warp_trace_on; then
-    logger -t ai-warp "watchdog: warp≠on — restarting tunnel"
-    ai_restart_tunnel_quiet
-    sleep 2
-    "${AI_WARP_SHARE}/scripts/routes.sh" up 2>/dev/null || true
-  fi
+  # Do not bounce the tunnel on warp≠on — CF is not in DeepMind routes;
+  # a flaky trace was restarting every 2 minutes and killing panel ping.
+}
 
   ai_sticky_save >/dev/null 2>&1 || true
 }

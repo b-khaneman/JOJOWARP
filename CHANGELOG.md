@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.2 — 2026-08-16
+
+### Fixed (debug pass)
+- **Stale routes:** `refresh` used to overwrite the CIDR file *before* `routes down`, so old goog.json / 8.8.8.8 routes stayed in the kernel. Now down first; `up` also flushes every non-kernel route on `aiwarp`.
+- **Watchdog restart loop:** `warp≠on` no longer bounces the tunnel every 2 minutes (Cloudflare is not in DeepMind routes).
+- **ip6tables vs WARP v6:** REJECT chain only when the host has no WARP IPv6 (otherwise it blocked the tunnel).
+- **Stale geosite cache:** fallback uses the packaged list, not an old `/etc/ai-warp/google-deepmind.txt` with extra Google hosts.
+- **iface UP check:** require operstate up, not merely that the link exists.
+- Health `warp≠on` is informational, not a failure.
+
 ## 1.3.1 — 2026-08-16
 
 ### Fixed

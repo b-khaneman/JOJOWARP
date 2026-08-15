@@ -333,12 +333,12 @@ ai_parse_geosite_hosts() {
 }
 
 ai_deepmind_file() {
-  if [[ -f "${AI_WARP_STATE}/google-deepmind.txt" ]]; then
-    echo "${AI_WARP_STATE}/google-deepmind.txt"
-  elif [[ -f "${AI_WARP_SHARE}/conf/google-deepmind.txt" ]]; then
+  if [[ -f "${AI_WARP_SHARE}/conf/google-deepmind.txt" ]]; then
     echo "${AI_WARP_SHARE}/conf/google-deepmind.txt"
+  elif [[ -f "${AI_WARP_SHARE_LIB:-}/conf/google-deepmind.txt" ]]; then
+    echo "${AI_WARP_SHARE_LIB}/conf/google-deepmind.txt"
   else
-    echo "${AI_WARP_SHARE_LIB:-.}/conf/google-deepmind.txt"
+    echo "${AI_WARP_STATE}/google-deepmind.txt"
   fi
 }
 

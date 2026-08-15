@@ -6,7 +6,7 @@ Default path: **only Google AI host `/32`s** via WARP — not the entire Google 
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.3.1** · License: MIT
+Version: **1.3.2** · License: MIT
 
 ---
 
@@ -15,13 +15,13 @@ Version: **1.3.1** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.1" | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.2" | sudo bash
 ```
 
 If GitHub is filtered:
 
 ```bash
-curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.1/install.sh" | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.2/install.sh" | sudo bash
 ```
 
 Local clone:
@@ -111,7 +111,7 @@ Every install calls Cloudflare and creates a **new WARP device** (`device_id`) f
 ```bash
 sudo jojowarp install --fresh
 # or:
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.1" | sudo bash -s -- --fresh
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.2" | sudo bash -s -- --fresh
 ```
 
 ---
@@ -186,7 +186,7 @@ curl -fsSL https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/uninstall.
 | `interface: DOWN` | `sudo jojowarp restart` then `sudo jojowarp status` |
 | handshake stale | watchdog rotates WARP endpoint automatically; or `sudo jojowarp restart` |
 | `warp≠on` | kernel WireGuard + UDP/2408 to `162.159.192.0/24` |
-| Gemini still blocked | confirm Kharej install; `ip route get 8.8.8.8` must show `dev aiwarp` |
+| Gemini still blocked | panel must send `geosite:google-deepmind` to this Kharej outbound; `jojowarp status` DeepMind path via aiwarp |
 | ChatGPT still blocked | `sudo jojowarp refresh` (host `/32`s change); IPv6 leak is handled automatically |
 | `IPv6 is disabled on this device` | fixed in 1.2.2 — tunnel is IPv4-only by default; re-run install from GitHub raw |
 | installer says 1.2.x but `jojowarp N نصب شد` is older | CDN cache; use the `?v=` GitHub raw URL in Install |
