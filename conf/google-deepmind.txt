@@ -1,8 +1,7 @@
-# geosite:google-deepmind (v2fly domain-list-community)
-# Plus a few Google auth/API hosts Gemini needs (not in the geosite file).
-# Hostnames only. Comments start with #.
+# Official geosite:google-deepmind only
+# Source: https://github.com/v2fly/domain-list-community/blob/master/data/google-deepmind
+# Do not add accounts.google.com / www.googleapis.com / gstatic — those break normal Google traffic.
 
-# ── Official geosite:google-deepmind ────────────────────────────
 deepmind.com
 deepmind.google
 geller-pa.googleapis.com
@@ -44,18 +43,3 @@ antigravity.googleapis.com
 antigravity.google
 antigravity-unleash.goog
 stitch.withgoogle.com
-
-# ── Companion hosts (login / API / static for Gemini) ───────────
-accounts.google.com
-oauth2.googleapis.com
-www.googleapis.com
-clients6.google.com
-www.gstatic.com
-ssl.gstatic.com
-www.recaptcha.net
-recaptcha.net
-content-autofill.googleapis.com
-alkaliprompting-pa.clients6.google.com
-aiplatform.googleapis.com
-gemini.googleapis.com
-aitestkitchen.withgoogle.com

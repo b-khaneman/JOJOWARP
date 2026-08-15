@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.1 — 2026-08-16
+
+### Fixed
+- **Strict geosite:google-deepmind only:** dropped companion hosts (`accounts.google.com`, `www.googleapis.com`, `gstatic`, Recaptcha) that were sending normal Google traffic into WARP.
+- **No Google DNS hijack:** removed forced `8.8.8.0/24` / `8.8.4.0/24` routes.
+- **No bulk Google IPv6:** removed `2001:4860::/32` (and friends) unreachable + ip6tables REJECT that broke Happy Eyeballs / YouTube v6.
+- Health/watchdog canary is a resolved DeepMind `/32`, not 8.8.8.8.
+- On refresh, leftover routes from 1.2.x are deleted.
+
 ## 1.3.0 — 2026-08-16
 
 ### Changed

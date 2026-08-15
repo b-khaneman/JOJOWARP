@@ -342,7 +342,7 @@ ai_deepmind_file() {
   fi
 }
 
-# Live geosite:google-deepmind + bundled fallback. Writes host list to $1.
+# Live geosite:google-deepmind, else bundled official list. Writes host list to $1.
 ai_load_deepmind_hosts() {
   local out="$1" raw bundled
   bundled="$(ai_deepmind_file)"
@@ -352,16 +352,28 @@ ai_load_deepmind_hosts() {
       -H 'Cache-Control: no-cache' \
       "https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/google-deepmind" \
       -o "$raw" && [[ -s "$raw" ]]; then
-    ai_parse_geosite_hosts <"$raw" >>"$out"
-    ai_info "Loaded live geosite:google-deepmind"
-  else
+    ai_parse_geosite_hosts <"$raw" >"$out"
+    ai_info "Loaded live geosite:google-deepmind ($(wc -l <"$out" | tr -d ' ') hosts)"
+  elif [[ -f "$bundled" ]]; then
     ai_warn "Live geosite unreachable — using bundled google-deepmind.txt"
+    ai_parse_geosite_hosts <"$bundled" >"$out"
   fi
   rm -f "$raw"
-  if [[ -f "$bundled" ]]; then
-    ai_parse_geosite_hosts <"$bundled" >>"$out"
-  fi
   sort -u -o "$out" "$out"
+}
+
+ai_write_canary() {
+  local ip
+  ip="$(grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/32$' "${AI_WARP_CIDR_FILE}" 2>/dev/null | head -1 | cut -d/ -f1 || true)"
+  if [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "$ip" >"${AI_WARP_CANARY_IP}"
+  fi
+  ip="$(grep -E '^[0-9a-fA-F:]+/128$' "${AI_WARP_CIDR6_FILE}" 2>/dev/null | head -1 | cut -d/ -f1 || true)"
+  if [[ -n "$ip" ]]; then
+    echo "$ip" >"${AI_WARP_CANARY_IP6}"
+  else
+    rm -f "${AI_WARP_CANARY_IP6}"
+  fi
 }
 
 ai_build_cidr_list() {
@@ -443,8 +455,7 @@ ai_build_cidr_list() {
   ai_filter_cdn_safe_v4 "${tmp4}.clean" "$filtered4"
   ai_filter_cdn_safe_v6 "${tmp6}.clean" "$filtered6"
 
-  grep -q '^8\.8\.8\.0/24$' "$filtered4" || echo '8.8.8.0/24' >>"$filtered4"
-  grep -q '^8\.8\.4\.0/24$' "$filtered4" || echo '8.8.4.0/24' >>"$filtered4"
+  # Never inject 8.8.8.0/24 — that hijacks Google DNS for all panel users.
   sort -u -o "$filtered4" "$filtered4"
   sort -u -o "$filtered6" "$filtered6"
 
@@ -455,8 +466,9 @@ ai_build_cidr_list() {
   count4="$(wc -l <"${AI_WARP_CIDR_FILE}" | tr -d ' ')"
   count6="$(wc -l <"${AI_WARP_CIDR6_FILE}" | tr -d ' ')"
   if (( count4 < 1 )); then
-    ai_fail "Could not build IPv4 route list (DNS resolve failed)."
+    ai_fail "Could not resolve geosite:google-deepmind (DNS failed)."
   fi
+  ai_write_canary
   echo "$mode" >"${AI_WARP_MODE_FILE}"
-  ai_log "Route targets: ${count4} IPv4 + ${count6} IPv6 (DeepMind /32s — no full Google CIDR dump)"
+  ai_log "Route targets: ${count4} IPv4 /32 + ${count6} IPv6 /128 (geosite:google-deepmind only)"
 }

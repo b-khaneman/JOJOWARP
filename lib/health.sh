@@ -19,20 +19,25 @@ ai_handshake_ok() {
 }
 
 ai_google_routed() {
-  ip route get 8.8.8.8 2>/dev/null | grep -q "dev ${AI_WARP_IFACE}"
+  local ip
+  ip="$(tr -d '[:space:]' <"${AI_WARP_CANARY_IP}" 2>/dev/null || true)"
+  if [[ ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    ip="$(grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/32$' "${AI_WARP_CIDR_FILE}" 2>/dev/null | head -1 | cut -d/ -f1 || true)"
+  fi
+  [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
+  ip route get "$ip" 2>/dev/null | grep -q "dev ${AI_WARP_IFACE}"
 }
 
-# Leak = host has global IPv6 and Google v6 still exits via a non-WARP iface.
+# Only flag a leak for the DeepMind canary v6, not all of Google IPv6.
 ai_google_v6_leaking() {
   ai_host_has_global_ipv6 || return 1
-  local out
-  out="$(ip -6 route get 2001:4860:4860::8888 2>/dev/null || true)"
+  local ip out
+  ip="$(tr -d '[:space:]' <"${AI_WARP_CANARY_IP6}" 2>/dev/null || true)"
+  [[ -n "$ip" ]] || return 1
+  out="$(ip -6 route get "$ip" 2>/dev/null || true)"
   [[ -n "$out" ]] || return 1
   echo "$out" | grep -q "dev ${AI_WARP_IFACE}" && return 1
   echo "$out" | grep -Eiq 'unreachable|prohibit|blackhole' && return 1
-  if command -v ip6tables >/dev/null 2>&1 && ip6tables -L AIWARP6 >/dev/null 2>&1; then
-    return 1
-  fi
   echo "$out" | grep -Eq 'dev (eth|ens|enp|eno)' && return 0
   return 1
 }
@@ -75,11 +80,10 @@ ai_healthcheck() {
   fi
   echo
   echo "--- sample routes ---"
-  ip route get 8.8.8.8 2>/dev/null || true
-  ip route get 142.250.0.1 2>/dev/null || true
-  if ai_have ip; then
-    ip -6 route get 2001:4860:4860::8888 2>/dev/null || true
+  if [[ -s "${AI_WARP_CANARY_IP}" ]]; then
+    ip route get "$(tr -d '[:space:]' <"${AI_WARP_CANARY_IP}")" 2>/dev/null || true
   fi
+  ip route get 1.1.1.1 2>/dev/null || true
   echo
 
   if ai_handshake_ok; then
@@ -90,17 +94,16 @@ ai_healthcheck() {
   fi
 
   if ai_google_routed; then
-    ai_log "Google path via ${AI_WARP_IFACE}: OK"
+    ai_log "DeepMind path via ${AI_WARP_IFACE}: OK"
   else
-    ai_warn "Google path NOT via ${AI_WARP_IFACE}"
+    ai_warn "DeepMind path NOT via ${AI_WARP_IFACE}"
     rc=1
   fi
 
   if ai_google_v6_leaking; then
-    ai_warn "IPv6 Google path leaks via eth (not WARP) — run: sudo jojowarp refresh"
-    rc=1
-  elif ai_host_has_global_ipv6; then
-    ai_log "IPv6 AI leak: blocked (unreachable or via ${AI_WARP_IFACE})"
+    ai_warn "DeepMind IPv6 still via eth — Happy Eyeballs may skip WARP"
+  elif [[ -s "${AI_WARP_CANARY_IP6}" ]]; then
+    ai_log "DeepMind IPv6: via WARP or unreachable (OK)"
   fi
 
   if ai_warp_trace_on; then

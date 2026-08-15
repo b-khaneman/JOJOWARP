@@ -20,28 +20,32 @@ iface_has_v6() {
 
 iter_v6_cidrs() {
   local cidr
-  if [[ -s "$CIDR6_FILE" ]]; then
-    while IFS= read -r cidr; do
-      [[ -z "$cidr" ]] && continue
-      printf '%s\n' "$cidr"
-    done <"$CIDR6_FILE"
-  fi
-  # Canaries — Google AI / DNS (cover Hetzner static defaults)
-  printf '%s\n' \
-    '2001:4860::/32' \
-    '2607:f8b0::/32' \
-    '2404:6800::/32' \
-    '2404:f340::/32' \
-    '2a00:1450::/32' \
-    '2600:1900::/28' \
-    '2620:0:1000::/40' \
-    '2800:3f0::/32' \
-    '2c0f:fb50::/32'
+  [[ -s "$CIDR6_FILE" ]] || return 0
+  while IFS= read -r cidr; do
+    [[ -z "$cidr" ]] && continue
+    printf '%s\n' "$cidr"
+  done <"$CIDR6_FILE"
+}
+
+# Older JOJOWARP versions dumped Google DNS + whole Google IPv6 into the table.
+cleanup_legacy_bulk() {
+  local p
+  for p in 8.8.8.0/24 8.8.4.0/24 8.8.8.8/32 8.8.4.4/32; do
+    ip route del "$p" dev "$IFACE" 2>/dev/null || true
+  done
+  for p in \
+    2001:4860::/32 2607:f8b0::/32 2404:6800::/32 2404:f340::/32 \
+    2a00:1450::/32 2600:1900::/28 2620:0:1000::/40 2800:3f0::/32 2c0f:fb50::/32
+  do
+    ip -6 route del unreachable "$p" 2>/dev/null || true
+    ip -6 route del "$p" dev "$IFACE" 2>/dev/null || true
+  done
 }
 
 add_v4() {
   [[ -f "$CIDR_FILE" ]] || { echo "missing $CIDR_FILE" >&2; exit 1; }
   ip link show "$IFACE" >/dev/null
+  cleanup_legacy_bulk
 
   sysctl -w "net.ipv4.conf.${IFACE}.rp_filter=0" >/dev/null 2>&1 || true
 
@@ -143,6 +147,7 @@ del_v4() {
 
 del_v6() {
   local cidr
+  cleanup_legacy_bulk
   while IFS= read -r cidr; do
     [[ -z "$cidr" ]] && continue
     ip -6 route del "$cidr" dev "$IFACE" 2>/dev/null || true
