@@ -1,12 +1,14 @@
 # JOJOWARP
 
-Selective **Cloudflare WARP** for **`geosite:google-deepmind`** (Gemini / Flow / NotebookLM / Jules / …) on a Kharej Ubuntu VPS.
+Selective **Cloudflare WARP** for **Google AI + AI sites** on a Kharej Ubuntu VPS.
 
-Default path: **only Google AI host `/32`s** via WARP — not the entire Google IP space (that killed ping).
+- All user traffic exits this VPS (your panel / Pasarguard).
+- **Only** Gemini / Flow / NotebookLM + ChatGPT / Claude / … go via WARP (`/32`, one sticky WARP IP).
+- YouTube, normal Google, Instagram, CDN → **direct VPS IP** (ping stays low).
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.3.5** · License: MIT
+Version: **1.3.6** · License: MIT
 
 ---
 
@@ -15,13 +17,13 @@ Version: **1.3.5** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.5" | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.6" | sudo bash
 ```
 
 If GitHub is filtered:
 
 ```bash
-curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.5/install.sh" | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.6/install.sh" | sudo bash
 ```
 
 Local clone:
@@ -32,7 +34,7 @@ sudo bash install.sh
 
 This installs packages, registers a persistent WARP account, builds AI routes (IPv4 + IPv6), starts WireGuard, and enables watchdog + refresh timers.
 
-**No Pasarguard / panel routing changes.** Install on the same Kharej VPS that already carries your users’ full proxy egress; the script selects DeepMind + Gemini login hosts at the OS level.
+**No Pasarguard routing changes.** Install on the Kharej VPS that already carries full proxy egress.
 
 ---
 
@@ -40,10 +42,11 @@ This installs packages, registers a persistent WARP account, builds AI routes (I
 
 | Traffic | Path |
 |---------|------|
-| Panel / tunnel / your CDN | Direct |
-| Cloudflare edge **blocks** | Direct |
-| Gemini / Flow / NotebookLM + login companions | WARP (`/32` only) |
-| Rest of Google / YouTube / GCP | Direct (not the whole goog.json table) |
+| Panel / tunnel / your CDN | Direct VPS |
+| YouTube / Search / normal Google | Direct VPS |
+| Gemini / Flow / NotebookLM + login | WARP sticky IP (`/32`) |
+| ChatGPT / Claude / Copilot / Grok / … | WARP sticky IP (`/32`) |
+| Cloudflare edge **blocks** | Never via WARP |
 
 WireGuard uses `Table = off` — **no default-route steal**.
 
@@ -55,7 +58,7 @@ WireGuard uses `Table = off` — **no default-route steal**.
 
 ```bash
 jojowarp status
-jojowarp ip
+jojowarp ip              # sticky WARP egress IP
 jojowarp ip --relock
 jojowarp refresh
 jojowarp restart
@@ -68,27 +71,26 @@ jojowarp uninstall --purge
 
 ## Modes
 
-Default: **`google`** = DeepMind geosite + Gemini companions
+Default: **`google`** = Google AI + lean AI sites (recommended)
 
 ```bash
-sudo bash install.sh --mode google     # recommended (zero panel config)
-sudo bash install.sh --mode ai         # DeepMind + ChatGPT/Claude/…
-sudo bash install.sh --mode full
+sudo bash install.sh --mode google     # Gemini + ChatGPT/Claude/… /32 only
+sudo bash install.sh --mode ai         # same lean lists
+sudo bash install.sh --mode full       # fat list + CloudFront (higher ping risk)
 ```
 
 | Mode | What goes via WARP |
 |------|--------------------|
-| `google` | DeepMind hosts + login/OAuth/gstatic companions as `/32` |
-| `ai` | DeepMind + ChatGPT / Claude / Copilot / other AI hostnames |
-| `full` | `ai` + AWS CloudFront prefixes |
+| `google` / `ai` | DeepMind + Gemini companions + `ai-sites.txt` as `/32` |
+| `full` | Fat domain list + CloudFront prefixes |
 
 Do **not** set `AI_WARP_GOOGLE_CIDRS=1` unless you accept high ping (dumps all Google IP ranges).
 
-### Panel (optional)
+Edit lean AI hosts anytime: `/etc/ai-warp/ai-sites.txt` then `sudo jojowarp refresh`.
+
+### Panel
 
 Default Pasarguard (all traffic → this Kharej node): **do nothing in the panel.**
-
-Only if you use Iran Direct + a separate Kharej outbound and Google never reaches this VPS, send Gemini through this node. Otherwise skip panel routing entirely.
 
 ---
 ## Unique identity (per server)
@@ -104,7 +106,7 @@ Every install calls Cloudflare and creates a **new WARP device** (`device_id`) f
 ```bash
 sudo jojowarp install --fresh
 # or:
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.5" | sudo bash -s -- --fresh
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.6" | sudo bash -s -- --fresh
 ```
 
 ---

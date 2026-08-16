@@ -356,6 +356,36 @@ ai_load_gemini_companions() {
   sort -u -o "$out" "$out"
 }
 
+ai_ai_sites_file() {
+  if [[ -f "${AI_WARP_STATE}/ai-sites.txt" ]]; then
+    echo "${AI_WARP_STATE}/ai-sites.txt"
+  elif [[ -f "${AI_WARP_SHARE}/conf/ai-sites.txt" ]]; then
+    echo "${AI_WARP_SHARE}/conf/ai-sites.txt"
+  elif [[ -f "${AI_WARP_SHARE_LIB:-}/conf/ai-sites.txt" ]]; then
+    echo "${AI_WARP_SHARE_LIB}/conf/ai-sites.txt"
+  else
+    echo ""
+  fi
+}
+
+# ChatGPT / Claude / Copilot / … — lean host list only (never goog.json / Meta AS).
+ai_load_ai_sites() {
+  local out="$1" src
+  src="$(ai_ai_sites_file)"
+  : >"$out"
+  [[ -n "$src" && -f "$src" ]] || return 0
+  ai_iter_domain_hosts "$src" >"$out"
+  sort -u -o "$out" "$out"
+}
+
+ai_resolve_hostfile_into() {
+  local hosts="$1" out4="$2" out6="$3"
+  [[ -s "$hosts" ]] || return 0
+  ai_resolve_domains_v4 "$hosts" >>"$out4" || true
+  ai_resolve_domains_v6 "$hosts" >>"$out6" || true
+}
+
+
 # Live geosite:google-deepmind, else bundled official list. Writes host list to $1.
 ai_load_deepmind_hosts() {
   local out="$1" raw bundled
@@ -392,7 +422,7 @@ ai_write_canary() {
 
 ai_build_cidr_list() {
   local mode="${1:-google}"
-  local tmp4 tmp6 filtered4 filtered6 gtmp ctmp count4 count6 igfile
+  local tmp4 tmp6 filtered4 filtered6 gtmp ctmp atmp count4 count6 igfile
   tmp4="$(mktemp)"
   tmp6="$(mktemp)"
   filtered4="$(mktemp)"
@@ -417,30 +447,41 @@ ai_build_cidr_list() {
     ai_fetch_google_cidrs v6 >>"$tmp6" || true
   fi
 
-  if [[ "$mode" == "google" ]]; then
+  # Default path (google/ai): DeepMind + Gemini companions + lean AI sites as /32 only.
+  # Never dumps YouTube / full Google / Meta AS — keeps panel ping low.
+  if [[ "$mode" == "google" || "$mode" == "ai" ]]; then
     gtmp="$(mktemp)"
     ctmp="$(mktemp)"
-    ai_info "Resolving geosite:google-deepmind + Gemini companions (zero panel config)…"
+    atmp="$(mktemp)"
+    ai_info "Resolving Google AI (geosite:google-deepmind)…"
     ai_load_deepmind_hosts "$gtmp"
-    ai_resolve_domains_v4 "$gtmp" >>"$tmp4" || true
-    ai_resolve_domains_v6 "$gtmp" >>"$tmp6" || true
+    ai_resolve_hostfile_into "$gtmp" "$tmp4" "$tmp6"
     cp -f "$gtmp" "${AI_WARP_STATE}/google-deepmind.txt"
+
     ai_load_gemini_companions "$ctmp"
     if [[ -s "$ctmp" ]]; then
       ai_info "Resolving Gemini companions ($(wc -l <"$ctmp" | tr -d ' ') hosts)…"
-      ai_resolve_domains_v4 "$ctmp" >>"$tmp4" || true
-      ai_resolve_domains_v6 "$ctmp" >>"$tmp6" || true
+      ai_resolve_hostfile_into "$ctmp" "$tmp4" "$tmp6"
       cp -f "$ctmp" "${AI_WARP_STATE}/gemini-companions.txt"
     fi
-    rm -f "$gtmp" "$ctmp"
-  elif [[ "$mode" == "ai" || "$mode" == "full" ]]; then
-    ai_info "Resolving AI domains (Gemini, Flow, ChatGPT, Claude, …)…"
+
+    ai_load_ai_sites "$atmp"
+    if [[ -s "$atmp" ]]; then
+      ai_info "Resolving AI sites ChatGPT/Claude/… ($(wc -l <"$atmp" | tr -d ' ') hosts)…"
+      ai_resolve_hostfile_into "$atmp" "$tmp4" "$tmp6"
+      cp -f "$atmp" "${AI_WARP_STATE}/ai-sites.txt"
+    fi
+    rm -f "$gtmp" "$ctmp" "$atmp"
+  fi
+
+  # Legacy fat list only for mode=full (plus CloudFront below).
+  if [[ "$mode" == "full" ]]; then
+    ai_info "Resolving full AI domain list (higher route count)…"
     ai_resolve_domains_v4 "${AI_WARP_DOMAINS}" >>"$tmp4" || true
     ai_resolve_domains_v6 "${AI_WARP_DOMAINS}" >>"$tmp6" || true
     gtmp="$(mktemp)"
     ai_load_deepmind_hosts "$gtmp"
-    ai_resolve_domains_v4 "$gtmp" >>"$tmp4" || true
-    ai_resolve_domains_v6 "$gtmp" >>"$tmp6" || true
+    ai_resolve_hostfile_into "$gtmp" "$tmp4" "$tmp6"
     rm -f "$gtmp"
   fi
 
@@ -488,9 +529,9 @@ ai_build_cidr_list() {
   count4="$(wc -l <"${AI_WARP_CIDR_FILE}" | tr -d ' ')"
   count6="$(wc -l <"${AI_WARP_CIDR6_FILE}" | tr -d ' ')"
   if (( count4 < 1 )); then
-    ai_fail "Could not resolve geosite:google-deepmind (DNS failed)."
+    ai_fail "Could not resolve AI hosts (DNS failed)."
   fi
   ai_write_canary
   echo "$mode" >"${AI_WARP_MODE_FILE}"
-  ai_log "Route targets: ${count4} IPv4 /32 + ${count6} IPv6 /128 (DeepMind + companions)"
+  ai_log "Route targets: ${count4} IPv4 /32 + ${count6} IPv6 /128 (AI-only; rest of VPS stays direct)"
 }

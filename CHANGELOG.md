@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.6 — 2026-08-17
+
+### Changed
+- **AI-only selective WARP (default):** DeepMind + Gemini companions + lean ChatGPT/Claude/Copilot/… host `/32`s. YouTube / full Google / Meta AS / Gradle stay on the VPS direct IP so panel ping stays low.
+- One WARP account per server → sticky egress identity (`jojowarp ip`).
+- Mode `ai` uses the same lean lists as `google` (fat `ai-domains.txt` only for `full`).
+
 ## 1.3.5 — 2026-08-17
 
 ### Changed

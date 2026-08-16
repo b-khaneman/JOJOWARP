@@ -1,0 +1,80 @@
+# Lean AI hostnames only → /32 and /128 via WARP.
+# No goog.json, no YouTube, no Meta AS, no Gradle/Maven mirrors.
+# Rest of traffic stays on the VPS direct IP (low panel ping).
+
+# ── OpenAI / ChatGPT / Sora ─────────────────────────────────────
+openai.com
+www.openai.com
+chatgpt.com
+chat.openai.com
+api.openai.com
+platform.openai.com
+auth0.openai.com
+auth.openai.com
+cdn.openai.com
+images.openai.com
+ab.chatgpt.com
+ws.chatgpt.com
+sora.chatgpt.com
+operator.chatgpt.com
+oaiusercontent.com
+oaistatic.com
+
+# ── Anthropic / Claude ──────────────────────────────────────────
+anthropic.com
+www.anthropic.com
+claude.ai
+api.anthropic.com
+console.anthropic.com
+statsig.anthropic.com
+
+# ── Microsoft Copilot (not all of Bing) ─────────────────────────
+copilot.microsoft.com
+sydney.bing.com
+edgeservices.bing.com
+copilot.cloud.microsoft
+openai.azure.com
+
+# ── xAI / Grok ──────────────────────────────────────────────────
+x.ai
+grok.x.ai
+api.x.ai
+console.x.ai
+
+# ── Perplexity ──────────────────────────────────────────────────
+perplexity.ai
+www.perplexity.ai
+api.perplexity.ai
+pplx-api.perplexity.ai
+
+# ── Cursor ──────────────────────────────────────────────────────
+cursor.com
+www.cursor.com
+api2.cursor.sh
+repo42.cursor.sh
+
+# ── Other AI (host /32 only) ────────────────────────────────────
+character.ai
+www.character.ai
+plus.character.ai
+poe.com
+www.poe.com
+groq.com
+api.groq.com
+console.groq.com
+mistral.ai
+api.mistral.ai
+deepseek.com
+api.deepseek.com
+chat.deepseek.com
+huggingface.co
+api-inference.huggingface.co
+midjourney.com
+www.midjourney.com
+cdn.midjourney.com
+suno.com
+www.suno.com
+suno.ai
+meta.ai
+www.meta.ai
+api.meta.ai

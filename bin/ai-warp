@@ -130,8 +130,8 @@ ai_cmd_install() {
   echo
   ai_healthcheck || true
   echo
-  ai_log "تمام — Gemini از همین سرور آنلاک شد (بدون تغییر پنل)."
-  ai_log "کانفیگ پاسارگارد / CDN را عوض نکن؛ ترافیک همین نود خارج کافی است."
+  ai_log "تمام — فقط Gemini + سایت‌های AI از WARP (یک IP)؛ بقیه ترافیک مستقیم همین سرور."
+  ai_log "پینگ پنل بالا نمی‌رود. کانفیگ پاسارگارد را عوض نکن."
   if [[ "${AI_WARP_AUTO:-0}" != "1" ]]; then
     cat <<EOF
 
@@ -208,6 +208,7 @@ ai_cmd_update() {
     scripts/routes.sh \
     bin/ai-warp \
     conf/ai-domains.txt \
+    conf/ai-sites.txt \
     conf/google-deepmind.txt \
     conf/gemini-companions.txt \
     conf/ig-music-domains.txt
@@ -232,6 +233,11 @@ ai_cmd_update() {
           if [[ "${AI_WARP_KEEP_DOMAINS:-0}" != "1" ]]; then
             install -m644 "$tmp" "${AI_WARP_STATE}/ai-domains.txt"
           fi
+          ;;
+    conf/ai-sites.txt)
+          dest="${AI_WARP_SHARE}/conf/ai-sites.txt"
+          install -m644 "$tmp" "$dest"
+          install -m644 "$tmp" "${AI_WARP_STATE}/ai-sites.txt"
           ;;
     conf/google-deepmind.txt)
           dest="${AI_WARP_SHARE}/conf/google-deepmind.txt"
