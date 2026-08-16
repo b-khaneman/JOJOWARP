@@ -102,49 +102,41 @@ ai_is_ipv6() {
 }
 
 ai_lookup_host_v4() {
-  local host="$1" ip ns found=0
+  local host="$1" ip ns
+  local -a ips=()
   if ai_have dig; then
     for ns in 1.1.1.1 8.8.8.8 9.9.9.9; do
-      found=0
       while IFS= read -r ip; do
-        if ai_is_ipv4 "$ip"; then
-          echo "$ip"
-          found=1
-        fi
+        ai_is_ipv4 "$ip" && ips+=("$ip")
       done < <(ai_dig_at A "$host" "$ns")
-      if (( found )); then
-        return 0
-      fi
     done
   fi
-  if ai_have getent; then
+  if ((${#ips[@]} == 0)) && ai_have getent; then
     while IFS= read -r ip; do
-      ai_is_ipv4 "$ip" && echo "$ip"
+      ai_is_ipv4 "$ip" && ips+=("$ip")
     done < <(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}')
   fi
+  ((${#ips[@]})) || return 0
+  printf '%s\n' "${ips[@]}" | sort -u
 }
 
 ai_lookup_host_v6() {
-  local host="$1" ip ns found=0
+  local host="$1" ip ns
+  local -a ips=()
   if ai_have dig; then
     for ns in 1.1.1.1 8.8.8.8 9.9.9.9; do
-      found=0
       while IFS= read -r ip; do
-        if ai_is_ipv6 "$ip"; then
-          echo "$ip"
-          found=1
-        fi
+        ai_is_ipv6 "$ip" && ips+=("$ip")
       done < <(ai_dig_at AAAA "$host" "$ns")
-      if (( found )); then
-        return 0
-      fi
     done
   fi
-  if ai_have getent; then
+  if ((${#ips[@]} == 0)) && ai_have getent; then
     while IFS= read -r ip; do
-      ai_is_ipv6 "$ip" && echo "$ip"
+      ai_is_ipv6 "$ip" && ips+=("$ip")
     done < <(getent ahostsv6 "$host" 2>/dev/null | awk '{print $1}')
   fi
+  ((${#ips[@]})) || return 0
+  printf '%s\n' "${ips[@]}" | sort -u
 }
 
 ai_iter_domain_hosts() {
@@ -342,6 +334,28 @@ ai_deepmind_file() {
   fi
 }
 
+ai_companions_file() {
+  if [[ -f "${AI_WARP_STATE}/gemini-companions.txt" ]]; then
+    echo "${AI_WARP_STATE}/gemini-companions.txt"
+  elif [[ -f "${AI_WARP_SHARE}/conf/gemini-companions.txt" ]]; then
+    echo "${AI_WARP_SHARE}/conf/gemini-companions.txt"
+  elif [[ -f "${AI_WARP_SHARE_LIB:-}/conf/gemini-companions.txt" ]]; then
+    echo "${AI_WARP_SHARE_LIB}/conf/gemini-companions.txt"
+  else
+    echo ""
+  fi
+}
+
+# Login / OAuth / gstatic needed so Gemini works with zero panel routing changes.
+ai_load_gemini_companions() {
+  local out="$1" src
+  src="$(ai_companions_file)"
+  : >"$out"
+  [[ -n "$src" && -f "$src" ]] || return 0
+  ai_iter_domain_hosts "$src" >"$out"
+  sort -u -o "$out" "$out"
+}
+
 # Live geosite:google-deepmind, else bundled official list. Writes host list to $1.
 ai_load_deepmind_hosts() {
   local out="$1" raw bundled
@@ -378,7 +392,7 @@ ai_write_canary() {
 
 ai_build_cidr_list() {
   local mode="${1:-google}"
-  local tmp4 tmp6 filtered4 filtered6 gtmp count4 count6 igfile
+  local tmp4 tmp6 filtered4 filtered6 gtmp ctmp count4 count6 igfile
   tmp4="$(mktemp)"
   tmp6="$(mktemp)"
   filtered4="$(mktemp)"
@@ -405,12 +419,20 @@ ai_build_cidr_list() {
 
   if [[ "$mode" == "google" ]]; then
     gtmp="$(mktemp)"
-    ai_info "Resolving geosite:google-deepmind (Gemini / Flow / NotebookLM / …)…"
+    ctmp="$(mktemp)"
+    ai_info "Resolving geosite:google-deepmind + Gemini companions (zero panel config)…"
     ai_load_deepmind_hosts "$gtmp"
     ai_resolve_domains_v4 "$gtmp" >>"$tmp4" || true
     ai_resolve_domains_v6 "$gtmp" >>"$tmp6" || true
     cp -f "$gtmp" "${AI_WARP_STATE}/google-deepmind.txt"
-    rm -f "$gtmp"
+    ai_load_gemini_companions "$ctmp"
+    if [[ -s "$ctmp" ]]; then
+      ai_info "Resolving Gemini companions ($(wc -l <"$ctmp" | tr -d ' ') hosts)…"
+      ai_resolve_domains_v4 "$ctmp" >>"$tmp4" || true
+      ai_resolve_domains_v6 "$ctmp" >>"$tmp6" || true
+      cp -f "$ctmp" "${AI_WARP_STATE}/gemini-companions.txt"
+    fi
+    rm -f "$gtmp" "$ctmp"
   elif [[ "$mode" == "ai" || "$mode" == "full" ]]; then
     ai_info "Resolving AI domains (Gemini, Flow, ChatGPT, Claude, …)…"
     ai_resolve_domains_v4 "${AI_WARP_DOMAINS}" >>"$tmp4" || true
@@ -470,5 +492,5 @@ ai_build_cidr_list() {
   fi
   ai_write_canary
   echo "$mode" >"${AI_WARP_MODE_FILE}"
-  ai_log "Route targets: ${count4} IPv4 /32 + ${count6} IPv6 /128 (geosite:google-deepmind only)"
+  ai_log "Route targets: ${count4} IPv4 /32 + ${count6} IPv6 /128 (DeepMind + companions)"
 }

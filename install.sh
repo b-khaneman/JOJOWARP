@@ -12,7 +12,7 @@
 #
 set -euo pipefail
 
-readonly INSTALLER_VERSION="1.3.4"
+readonly INSTALLER_VERSION="1.3.5"
 AI_WARP_STAGING=""
 readonly GITHUB_USER="${AI_WARP_GITHUB_USER:-b-khaneman}"
 readonly GITHUB_REPO="${AI_WARP_GITHUB_REPO:-JOJOWARP}"
@@ -119,6 +119,7 @@ PACKAGE_FILES=(
   LICENSE
   conf/ai-domains.txt
   conf/google-deepmind.txt
+  conf/gemini-companions.txt
   conf/ig-music-domains.txt
   lib/common.sh
   lib/deps.sh
@@ -196,6 +197,7 @@ install_tree() {
   install -m644 "${staging}/LICENSE" "${share}/LICENSE"
   install -m644 "${staging}/conf/ai-domains.txt" "${share}/conf/ai-domains.txt"
   install -m644 "${staging}/conf/google-deepmind.txt" "${share}/conf/google-deepmind.txt"
+  install -m644 "${staging}/conf/gemini-companions.txt" "${share}/conf/gemini-companions.txt"
   install -m644 "${staging}/conf/ig-music-domains.txt" "${share}/conf/ig-music-domains.txt"
   install -m644 "${staging}/lib/"*.sh "${share}/lib/"
   install -m755 "${staging}/scripts/routes.sh" "${share}/scripts/routes.sh"
@@ -209,6 +211,7 @@ install_tree() {
   else
     install -m644 "${staging}/conf/ai-domains.txt" /etc/ai-warp/ai-domains.txt
   fi
+  install -m644 "${staging}/conf/gemini-companions.txt" /etc/ai-warp/gemini-companions.txt
 
   log "jojowarp ${ver} نصب شد → /usr/local/bin/jojowarp"
 }

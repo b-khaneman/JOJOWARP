@@ -130,8 +130,8 @@ ai_cmd_install() {
   echo
   ai_healthcheck || true
   echo
-  ai_log "تمام — Gemini / Flow / ChatGPT / Claude از این سرور آنلاک شدند."
-  ai_log "کانفیگ پنل و CDN کلودفلر را عوض نکن؛ لازم نیست."
+  ai_log "تمام — Gemini از همین سرور آنلاک شد (بدون تغییر پنل)."
+  ai_log "کانفیگ پاسارگارد / CDN را عوض نکن؛ ترافیک همین نود خارج کافی است."
   if [[ "${AI_WARP_AUTO:-0}" != "1" ]]; then
     cat <<EOF
 
@@ -209,6 +209,7 @@ ai_cmd_update() {
     bin/ai-warp \
     conf/ai-domains.txt \
     conf/google-deepmind.txt \
+    conf/gemini-companions.txt \
     conf/ig-music-domains.txt
   do
     tmp="$(mktemp)"
@@ -237,6 +238,11 @@ ai_cmd_update() {
           install -m644 "$tmp" "$dest"
           install -m644 "$tmp" "${AI_WARP_STATE}/google-deepmind.txt"
           ;;
+    conf/gemini-companions.txt)
+          dest="${AI_WARP_SHARE}/conf/gemini-companions.txt"
+          install -m644 "$tmp" "$dest"
+          install -m644 "$tmp" "${AI_WARP_STATE}/gemini-companions.txt"
+          ;;
     conf/ig-music-domains.txt)
           dest="${AI_WARP_SHARE}/conf/ig-music-domains.txt"
           install -m644 "$tmp" "$dest"
@@ -257,7 +263,7 @@ ai_cmd_update() {
     rm -f "$tmp"
   done
   (( failed == 0 )) || ai_fail "Update incomplete. Retry: jojowarp update"
-  "${AI_WARP_SHARE}/scripts/routes.sh" up
+  ai_cmd_refresh
   ai_log "Update applied. Run: jojowarp status"
 }
 

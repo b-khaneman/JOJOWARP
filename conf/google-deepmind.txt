@@ -1,6 +1,6 @@
 # Official geosite:google-deepmind only
 # Source: https://github.com/v2fly/domain-list-community/blob/master/data/google-deepmind
-# Do not add accounts.google.com / www.googleapis.com / gstatic — those break normal Google traffic.
+# Login/OAuth/gstatic companions live in gemini-companions.txt (also routed in mode=google).
 
 deepmind.com
 deepmind.google

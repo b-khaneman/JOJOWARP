@@ -1,0 +1,13 @@
+# Minimal hosts Gemini needs beyond geosite:google-deepmind (login / OAuth / static UI).
+# Resolved to /32 and /128 only — not goog.json. Keeps panel ping low.
+# No Pasarguard routing rule needed when this Kharej VPS is already the full proxy egress.
+
+accounts.google.com
+oauth2.googleapis.com
+www.googleapis.com
+ssl.gstatic.com
+www.gstatic.com
+clients6.google.com
+ogads-pa.clients6.google.com
+www.recaptcha.net
+recaptcha.net

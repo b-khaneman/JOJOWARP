@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.5 — 2026-08-17
+
+### Changed
+- **Zero panel config (default):** mode `google` now also routes minimal Gemini companions (`accounts.google.com`, OAuth, gstatic, recaptcha) as `/32`s so login/UI works when all client traffic already exits this Kharej VPS — no Pasarguard geosite rule required.
+- DNS lookup merges A/AAAA from multiple resolvers for fuller `/32` coverage.
+
 ## 1.3.4 — 2026-08-16
 
 ### Fixed

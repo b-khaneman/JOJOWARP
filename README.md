@@ -6,7 +6,7 @@ Default path: **only Google AI host `/32`s** via WARP — not the entire Google 
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.3.4** · License: MIT
+Version: **1.3.5** · License: MIT
 
 ---
 
@@ -15,13 +15,13 @@ Version: **1.3.4** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.4" | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.5" | sudo bash
 ```
 
 If GitHub is filtered:
 
 ```bash
-curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.4/install.sh" | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.5/install.sh" | sudo bash
 ```
 
 Local clone:
@@ -32,6 +32,8 @@ sudo bash install.sh
 
 This installs packages, registers a persistent WARP account, builds AI routes (IPv4 + IPv6), starts WireGuard, and enables watchdog + refresh timers.
 
+**No Pasarguard / panel routing changes.** Install on the same Kharej VPS that already carries your users’ full proxy egress; the script selects DeepMind + Gemini login hosts at the OS level.
+
 ---
 
 ## How it works
@@ -40,7 +42,7 @@ This installs packages, registers a persistent WARP account, builds AI routes (I
 |---------|------|
 | Panel / tunnel / your CDN | Direct |
 | Cloudflare edge **blocks** | Direct |
-| `geosite:google-deepmind` (Gemini / Flow / NotebookLM / …) | WARP (`/32` only) |
+| Gemini / Flow / NotebookLM + login companions | WARP (`/32` only) |
 | Rest of Google / YouTube / GCP | Direct (not the whole goog.json table) |
 
 WireGuard uses `Table = off` — **no default-route steal**.
@@ -66,38 +68,29 @@ jojowarp uninstall --purge
 
 ## Modes
 
-Default: **`google`** = `geosite:google-deepmind`
+Default: **`google`** = DeepMind geosite + Gemini companions
 
 ```bash
-sudo bash install.sh --mode google     # recommended
+sudo bash install.sh --mode google     # recommended (zero panel config)
 sudo bash install.sh --mode ai         # DeepMind + ChatGPT/Claude/…
 sudo bash install.sh --mode full
 ```
 
 | Mode | What goes via WARP |
 |------|--------------------|
-| `google` | Official DeepMind geosite hosts resolved to `/32` (low ping) |
+| `google` | DeepMind hosts + login/OAuth/gstatic companions as `/32` |
 | `ai` | DeepMind + ChatGPT / Claude / Copilot / other AI hostnames |
 | `full` | `ai` + AWS CloudFront prefixes |
 
 Do **not** set `AI_WARP_GOOGLE_CIDRS=1` unless you accept high ping (dumps all Google IP ranges).
 
-### Panel routing (Xray / sing-box)
+### Panel (optional)
 
-On the **client inbound** routing, send Google AI through the Kharej outbound (this VPS):
+Default Pasarguard (all traffic → this Kharej node): **do nothing in the panel.**
 
-```json
-{
-  "type": "field",
-  "domain": ["geosite:google-deepmind"],
-  "outboundTag": "PROXY"
-}
-```
-
-sing-box equivalent: `rule_set` / `geosite-google-deepmind` → the same proxy outbound.
+Only if you use Iran Direct + a separate Kharej outbound and Google never reaches this VPS, send Gemini through this node. Otherwise skip panel routing entirely.
 
 ---
-
 ## Unique identity (per server)
 
 Every install calls Cloudflare and creates a **new WARP device** (`device_id`) for that VPS.
@@ -111,7 +104,7 @@ Every install calls Cloudflare and creates a **new WARP device** (`device_id`) f
 ```bash
 sudo jojowarp install --fresh
 # or:
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.4" | sudo bash -s -- --fresh
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.5" | sudo bash -s -- --fresh
 ```
 
 ---
@@ -186,7 +179,7 @@ curl -fsSL https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/uninstall.
 | `interface: DOWN` | `sudo jojowarp restart` then `sudo jojowarp status` |
 | handshake stale | watchdog rotates WARP endpoint automatically; or `sudo jojowarp restart` |
 | `warp≠on` | kernel WireGuard + UDP/2408 to `162.159.192.0/24` |
-| Gemini still blocked | panel must send `geosite:google-deepmind` to this Kharej outbound; `jojowarp status` DeepMind path via aiwarp |
+| Gemini still blocked | `jojowarp status` must show UP + DeepMind via aiwarp; client must use this Kharej node (full proxy). No panel rule needed. |
 | ChatGPT still blocked | `sudo jojowarp refresh` (host `/32`s change); IPv6 leak is handled automatically |
 | `IPv6 is disabled on this device` | fixed in 1.2.2 — tunnel is IPv4-only by default; re-run install from GitHub raw |
 | installer says 1.2.x but `jojowarp N نصب شد` is older | CDN cache; use the `?v=` GitHub raw URL in Install |
