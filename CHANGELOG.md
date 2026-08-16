@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.3 — 2026-08-16
+
+### Fixed
+- **Install crash:** extra `}` in `lib/health.sh` (`ai_watchdog_tick`) caused `syntax error near unexpected token '}'`.
+
 ## 1.3.2 — 2026-08-16
 
 ### Fixed (debug pass)

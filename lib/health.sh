@@ -164,9 +164,5 @@ ai_watchdog_tick() {
     "${AI_WARP_SHARE}/scripts/routes.sh" up 2>/dev/null || true
   fi
 
-  # Do not bounce the tunnel on warp≠on — CF is not in DeepMind routes;
-  # a flaky trace was restarting every 2 minutes and killing panel ping.
-}
-
   ai_sticky_save >/dev/null 2>&1 || true
 }
