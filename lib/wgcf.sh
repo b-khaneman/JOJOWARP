@@ -85,14 +85,28 @@ ai_new_install_id() {
   fi
 }
 
+# wgcf writes TOML with single quotes: device_id = 'uuid'
+ai_toml_scalar() {
+  local key="$1" file="${2:-${AI_WARP_ACCOUNT}}" line val
+  [[ -s "$file" ]] || return 0
+  line="$(grep -E "^[[:space:]]*${key}[[:space:]]*=" "$file" 2>/dev/null | head -1 || true)"
+  [[ -n "$line" ]] || return 0
+  val="${line#*=}"
+  val="${val#"${val%%[![:space:]]*}"}"
+  val="${val%"${val##*[![:space:]]}"}"
+  val="${val#\'}"
+  val="${val%\'}"
+  val="${val#\"}"
+  val="${val%\"}"
+  printf '%s' "$val"
+}
+
 ai_account_device_id() {
-  awk -F'= *' '/^device_id/{gsub(/"/,"",$2); gsub(/ /,"",$2); print $2; exit}' \
-    "${AI_WARP_ACCOUNT}" 2>/dev/null || true
+  ai_toml_scalar device_id "${AI_WARP_ACCOUNT}"
 }
 
 ai_account_private_key() {
-  awk -F'= *' '/^private_key/{gsub(/"/,"",$2); gsub(/ /,"",$2); print $2; exit}' \
-    "${AI_WARP_ACCOUNT}" 2>/dev/null || true
+  ai_toml_scalar private_key "${AI_WARP_ACCOUNT}"
 }
 
 # Reject empty / truncated / obviously shared placeholder accounts.
@@ -101,7 +115,7 @@ ai_account_looks_valid() {
   [[ -s "${AI_WARP_ACCOUNT}" ]] || return 1
   did="$(ai_account_device_id)"
   pk="$(ai_account_private_key)"
-  [[ "$did" =~ ^[0-9a-fA-F-]{32,}$ ]] || return 1
+  [[ "$did" =~ ^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$ ]] || return 1
   [[ ${#pk} -ge 40 ]] || return 1
   return 0
 }

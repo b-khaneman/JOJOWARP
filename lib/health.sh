@@ -20,9 +20,15 @@ ai_handshake_ok() {
   (( age >= 0 && age < 180 ))
 }
 
+ai_read_trim_file() {
+  local f="$1"
+  [[ -s "$f" ]] || return 1
+  tr -d '[:space:]' <"$f"
+}
+
 ai_google_routed() {
   local ip
-  ip="$(tr -d '[:space:]' <"${AI_WARP_CANARY_IP}" 2>/dev/null || true)"
+  ip="$(ai_read_trim_file "${AI_WARP_CANARY_IP}" 2>/dev/null || true)"
   if [[ ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     ip="$(grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/32$' "${AI_WARP_CIDR_FILE}" 2>/dev/null | head -1 | cut -d/ -f1 || true)"
   fi
@@ -34,7 +40,7 @@ ai_google_routed() {
 ai_google_v6_leaking() {
   ai_host_has_global_ipv6 || return 1
   local ip out
-  ip="$(tr -d '[:space:]' <"${AI_WARP_CANARY_IP6}" 2>/dev/null || true)"
+  ip="$(ai_read_trim_file "${AI_WARP_CANARY_IP6}" 2>/dev/null || true)"
   [[ -n "$ip" ]] || return 1
   out="$(ip -6 route get "$ip" 2>/dev/null || true)"
   [[ -n "$out" ]] || return 1
@@ -124,7 +130,7 @@ ai_healthcheck() {
     echo "IPv6 CIDRs routed: $(wc -l <"${AI_WARP_CIDR6_FILE}" | tr -d ' ')"
   fi
   if [[ -s "${AI_WARP_ACCOUNT}" ]]; then
-    echo "device-id : $(awk -F'= *' '/^device_id/{gsub(/"/,"",$2); print $2; exit}' "${AI_WARP_ACCOUNT}" 2>/dev/null || echo —)"
+    echo "device-id : $(ai_account_device_id 2>/dev/null || echo —)"
   fi
   if [[ -s "${AI_WARP_INSTALL_ID}" ]]; then
     echo "install-id: $(tr -d '[:space:]' <"${AI_WARP_INSTALL_ID}")"

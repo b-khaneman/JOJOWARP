@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.4 — 2026-08-16
+
+### Fixed
+- **Install abort after successful `wgcf register`:** account TOML uses single quotes (`device_id = '…'`). The validator only stripped `"`, treated a good account as corrupt, and never brought the tunnel up.
+- Health no longer errors when `canary-ip` / `canary-ip6` are missing (incomplete install).
+
 ## 1.3.3 — 2026-08-16
 
 ### Fixed

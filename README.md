@@ -6,7 +6,7 @@ Default path: **only Google AI host `/32`s** via WARP — not the entire Google 
 
 Repo: https://github.com/b-khaneman/JOJOWARP  
 Support: [@B_khaneman](https://t.me/B_khaneman)  
-Version: **1.3.3** · License: MIT
+Version: **1.3.4** · License: MIT
 
 ---
 
@@ -15,13 +15,13 @@ Version: **1.3.3** · License: MIT
 On the **Kharej** server that is the panel egress:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.3" | sudo bash
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.4" | sudo bash
 ```
 
 If GitHub is filtered:
 
 ```bash
-curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.3/install.sh" | sudo bash
+curl -fsSL "https://cdn.jsdelivr.net/gh/b-khaneman/JOJOWARP@v1.3.4/install.sh" | sudo bash
 ```
 
 Local clone:
@@ -111,7 +111,7 @@ Every install calls Cloudflare and creates a **new WARP device** (`device_id`) f
 ```bash
 sudo jojowarp install --fresh
 # or:
-curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.3" | sudo bash -s -- --fresh
+curl -fsSL "https://raw.githubusercontent.com/b-khaneman/JOJOWARP/main/install.sh?v=1.3.4" | sudo bash -s -- --fresh
 ```
 
 ---
